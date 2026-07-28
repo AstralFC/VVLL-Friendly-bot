@@ -1,86 +1,243 @@
-const fs = require("fs");
-const path = require("path");
+// ===============================
+// VVLL LEAGUE BOT
+// DATABASE.JS
+// ===============================
 
-const DATA_FILE = path.join(__dirname, "database.json");
+const fs = require("fs");
+
+const FILE = "./vvll-data.json";
+
+
+
+// ===============================
+// DEFAULT DATA
+// ===============================
 
 let db = {
-    teams: [],
-    players: [],
-    matches: [],
+
     queue: [],
-    standings: []
+
+
+    teams: [],
+
+
+    league: {
+
+        teams: [],
+
+        games: [],
+
+        currentGame: 0
+
+    },
+
+
+    players: [],
+
+
+    contracts: []
+
 };
 
-async function connect() {
-    if (!fs.existsSync(DATA_FILE)) {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+
+
+// ===============================
+// LOAD DATA
+// ===============================
+
+if(fs.existsSync(FILE)){
+
+
+    db =
+    JSON.parse(
+        fs.readFileSync(FILE)
+    );
+
+
+}
+
+
+
+
+// ===============================
+// SAVE DATA
+// ===============================
+
+function save(){
+
+
+    fs.writeFileSync(
+
+        FILE,
+
+        JSON.stringify(
+            db,
+            null,
+            4
+        )
+
+    );
+
+
+}
+
+
+
+// ===============================
+// MATCHES
+// ===============================
+
+function addMatch(match){
+
+
+    if(!db.matches){
+
+        db.matches = [];
+
     }
 
-    db = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
 
-    console.log("Database loaded.");
+    db.matches.push(match);
+
+
+    save();
+
 }
 
-function save() {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+
+
+function getMatches(){
+
+
+    return db.matches || [];
+
+
 }
+
+
+
+// ===============================
+// PLAYER SYSTEM
+// ===============================
+
+
+function addPlayer(id,name){
+
+
+    let player =
+    db.players.find(
+        p=>p.id===id
+    );
+
+
+    if(!player){
+
+
+        db.players.push({
+
+            id,
+
+            name,
+
+            goals:0,
+
+            saves:0,
+
+            blocks:0
+
+        });
+
+
+    }
+
+
+    save();
+
+}
+
+
+
+
+function getPlayers(){
+
+
+    return db.players;
+
+
+}
+
+
+
+
+// ===============================
+// STANDINGS
+// ===============================
+
+
+function getStandings(){
+
+
+let standings = [];
+
+
+db.league.teams.forEach(team=>{
+
+
+    standings.push({
+
+        id:team.id,
+
+        name:team.name,
+
+        points:0,
+
+        goals:0
+
+    });
+
+
+});
+
+
+
+return standings;
+
+
+}
+
+
+
+
+
+// ===============================
+// EXPORT
+// ===============================
 
 module.exports = {
 
-    connect,
 
-    save,
+db,
 
-    db,
+save,
 
-    addTeam(team) {
-        db.teams.push(team);
-        save();
-    },
 
-    getTeams() {
-        return db.teams;
-    },
+queue:
+db.queue,
 
-    addPlayer(player) {
-        db.players.push(player);
-        save();
-    },
 
-    getPlayers() {
-        return db.players;
-    },
+addMatch,
 
-    addMatch(match) {
-        db.matches.push(match);
-        save();
-    },
+getMatches,
 
-    getMatches() {
-        return db.matches;
-    },
 
-    addQueue(user) {
-        db.queue.push(user);
-        save();
-    },
+addPlayer,
 
-    removeQueue(id) {
-        db.queue = db.queue.filter(u => u.id !== id);
-        save();
-    },
+getPlayers,
 
-    getQueue() {
-        return db.queue;
-    },
 
-    updateStandings(data) {
-        db.standings = data;
-        save();
-    },
+getStandings
 
-    getStandings() {
-        return db.standings;
-    }
 
 };
