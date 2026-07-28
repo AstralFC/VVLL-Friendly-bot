@@ -1,7 +1,3 @@
-// ==========================
-// VVLL BOT PART 1/3
-// ==========================
-
 require("dotenv").config();
 
 const {
@@ -27,32 +23,30 @@ const client = new Client({
 });
 
 
-// Ref role
+// Referee role
 const REF_ROLE_ID = "1521782877950447740";
 
 
 // Storage
 let friendlyPlayers = new Map();
-let friendlyMessage = null;
-
 let leagueTeams = [];
 let leagueGames = [];
 
 
-// Convert 30m / 5h / 1d
-function convertTime(input){
+// Convert time
+function convertTime(time){
 
-    let amount = parseInt(input);
+    let amount = parseInt(time);
 
-    if(isNaN(amount)) return null;
+    if(!amount) return null;
 
-    if(input.endsWith("m"))
+    if(time.endsWith("m"))
         return amount * 60;
 
-    if(input.endsWith("h"))
+    if(time.endsWith("h"))
         return amount * 3600;
 
-    if(input.endsWith("d"))
+    if(time.endsWith("d"))
         return amount * 86400;
 
     return null;
@@ -60,111 +54,86 @@ function convertTime(input){
 
 
 
-// Friendly embed
-function friendlyEmbed(){
-
-let players=[...friendlyPlayers.keys()];
-
-return new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("⚽ VVLL Friendly Queue")
-
-.setDescription(
-
-`🟢 Ready Players: **${players.length}**
-
-${
-players.length
-? players.map(x=>`• <@${x}>`).join("\n")
-:"No players ready"
-}
-
-⏰ Players stay available for 2 hours`
-
-);
-
-}
-
-
-// Friendly buttons
-
-function friendlyButtons(){
-
-return new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("friendly_join")
-.setLabel("🟢 Join")
-.setStyle(ButtonStyle.Success),
-
-new ButtonBuilder()
-.setCustomId("friendly_leave")
-.setLabel("🔴 Leave")
-.setStyle(ButtonStyle.Danger)
-
-);
-
-}
-
-
-
 // Commands
 
-const commands=[
-
+const commands = [
 
 new SlashCommandBuilder()
-
 .setName("setup")
-
 .setDescription("Create friendly queue"),
 
 
 
 new SlashCommandBuilder()
-
 .setName("create-game")
+.setDescription("Create a match")
 
-.setDescription("Create a VVLL game")
-
-.addRoleOption(o=>
+.addRoleOption(o =>
 o.setName("home")
 .setDescription("Home team")
 .setRequired(true))
 
-.addRoleOption(o=>
+.addRoleOption(o =>
 o.setName("away")
 .setDescription("Away team")
 .setRequired(true))
 
-.addStringOption(o=>
+.addStringOption(o =>
 o.setName("time")
 .setDescription("Example: 30m 2h 1d")
 .setRequired(true))
 
-.addStringOption(o=>
+.addStringOption(o =>
 o.setName("format")
-.setDescription("League/Semi Final/Final")
-.setRequired(true))
+.setDescription("Match format")
+.setRequired(true)
+.addChoices(
+{name:"4v4",value:"4v4"},
+{name:"5v5",value:"5v5"},
+{name:"6v6",value:"6v6"},
+{name:"7v7",value:"7v7"},
+{name:"8v8",value:"8v8"},
+{name:"9v9",value:"9v9"},
+{name:"10v10",value:"10v10"},
+{name:"11v11",value:"11v11"}
+))
 
+.addStringOption(o =>
+o.setName("stage")
+.setDescription("Stage")
+.setRequired(true)
+.addChoices(
+{name:"League",value:"League"},
+{name:"Last 8",value:"Last 8"},
+{name:"Last 4",value:"Last 4"},
+{name:"Finals",value:"Finals"}
+)),
+
+
+
+new SlashCommandBuilder()
+.setName("league-setup")
+.setDescription("Setup league teams")
+
+.addRoleOption(o=>o.setName("team1").setDescription("Team 1").setRequired(true))
+.addRoleOption(o=>o.setName("team2").setDescription("Team 2").setRequired(true))
+.addRoleOption(o=>o.setName("team3").setDescription("Team 3").setRequired(true))
+.addRoleOption(o=>o.setName("team4").setDescription("Team 4").setRequired(true))
+.addRoleOption(o=>o.setName("team5").setDescription("Team 5").setRequired(true))
+.addRoleOption(o=>o.setName("team6").setDescription("Team 6").setRequired(true))
+.addRoleOption(o=>o.setName("team7").setDescription("Team 7").setDescription("Team 7").setRequired(true))
+.addRoleOption(o=>o.setName("team8").setDescription("Team 8").setRequired(true))
 
 ].map(x=>x.toJSON());
 
 
 
-
-// Bot ready
-
 client.once("ready", async()=>{
 
-console.log(`✅ Online ${client.user.tag}`);
+console.log(`Online ${client.user.tag}`);
 
 
-const rest=new REST({
+const rest = new REST({
 version:"10"
 }).setToken(process.env.TOKEN);
 
@@ -180,17 +149,71 @@ body:commands
 );
 
 
-console.log("✅ Commands loaded");
+console.log("Commands registered");
 
 });
 
 
 
+// Friendly embed
 
-// Commands
+function friendlyEmbed(){
+
+let list=[...friendlyPlayers.keys()];
+
+return new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle("⚽ VVLL Friendly Queue")
+
+.setDescription(
+
+`
+🟢 Ready Players: **${list.length}**
+
+${
+list.length
+? list.map(x=>`• <@${x}>`).join("\n")
+:"Nobody joined yet"
+}
+
+⏰ Timer: 2 Hours
+`
+
+);
+
+}
+
+
+function friendlyButtons(){
+
+return new ActionRowBuilder()
+
+.addComponents(
+
+new ButtonBuilder()
+.setCustomId("join")
+.setLabel("🟢 Join")
+.setStyle(ButtonStyle.Success),
+
+new ButtonBuilder()
+.setCustomId("leave")
+.setLabel("🔴 Leave")
+.setStyle(ButtonStyle.Danger)
+
+);
+
+}
+// ==========================
+// VVLL BOT SECTION 2/2
+// ==========================
+
 
 client.on("interactionCreate", async interaction=>{
 
+
+// Slash commands
 
 if(interaction.isChatInputCommand()){
 
@@ -201,9 +224,16 @@ if(interaction.isChatInputCommand()){
 if(interaction.commandName==="setup"){
 
 
-friendlyMessage=
+await interaction.reply({
 
-await interaction.channel.send({
+content:"✅ Friendly queue created!",
+
+ephemeral:true
+
+});
+
+
+let msg = await interaction.channel.send({
 
 embeds:[
 friendlyEmbed()
@@ -216,13 +246,25 @@ friendlyButtons()
 });
 
 
-return interaction.reply({
+setInterval(async()=>{
 
-content:"✅ Friendly queue created",
+try{
 
-ephemeral:true
+await msg.edit({
+
+embeds:[
+friendlyEmbed()
+],
+
+components:[
+friendlyButtons()
+]
 
 });
+
+}catch{}
+
+},5000);
 
 
 }
@@ -234,19 +276,19 @@ ephemeral:true
 if(interaction.commandName==="create-game"){
 
 
-let time=
-interaction.options.getString("time");
 
+let seconds =
+convertTime(
+interaction.options.getString("time")
+);
 
-let seconds=
-convertTime(time);
 
 
 if(!seconds){
 
 return interaction.reply({
 
-content:"❌ Use 30m, 2h, 1d",
+content:"❌ Use time like 30m, 2h, or 1d",
 
 ephemeral:true
 
@@ -256,26 +298,29 @@ ephemeral:true
 
 
 
-let timestamp=
+let timestamp =
 Math.floor(Date.now()/1000)+seconds;
 
 
-let home=
+
+let home =
 interaction.options.getRole("home");
 
 
-let away=
+let away =
 interaction.options.getRole("away");
 
 
-let format=
+let format =
 interaction.options.getString("format");
 
 
+let stage =
+interaction.options.getString("stage");
 
-let embed=
 
-new EmbedBuilder()
+
+let embed = new EmbedBuilder()
 
 .setColor("#ff0055")
 
@@ -291,8 +336,12 @@ ${home}
 ${away}
 
 
-🏆 **Format**
+📋 **Format**
 ${format}
+
+
+🏆 **Stage**
+${stage}
 
 
 ⏰ **Starts**
@@ -311,15 +360,14 @@ ${format}
 
 
 
-let button=
-
+let row =
 new ActionRowBuilder()
 
 .addComponents(
 
 new ButtonBuilder()
 
-.setCustomId("claim_ref")
+.setCustomId("ref")
 
 .setLabel("🧑‍⚖️ Claim Ref")
 
@@ -328,41 +376,12 @@ new ButtonBuilder()
 );
 
 
+
 return interaction.reply({
 
 embeds:[embed],
 
-components:[button]
-
-});
-
-
-}
-
-
-}
-
-
-
-// Buttons
-
-if(interaction.isButton()){
-
-
-if(interaction.customId==="friendly_join"){
-
-
-friendlyPlayers.set(
-interaction.user.id,
-Date.now()
-);
-
-
-await interaction.reply({
-
-content:"✅ Joined friendly queue",
-
-ephemeral:true
+components:[row]
 
 });
 
@@ -371,177 +390,10 @@ ephemeral:true
 
 
 
-if(interaction.customId==="friendly_leave"){
-
-
-friendlyPlayers.delete(
-interaction.user.id
-);
-
-
-await interaction.reply({
-
-content:"❌ Left queue",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-if(interaction.customId==="claim_ref"){
-
-
-if(!interaction.member.roles.cache.has(REF_ROLE_ID)){
-
-
-return interaction.reply({
-
-content:"❌ You need the Referee role",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-let embed=
-EmbedBuilder.from(
-interaction.message.embeds[0]
-);
-
-
-embed.setDescription(
-
-embed.data.description.replace(
-
-"❌ Needed",
-
-`✅ ${interaction.user}`
-
-)
-
-);
-
-
-return interaction.update({
-
-embeds:[embed],
-
-components:[]
-
-});
-
-
-}
-
-
-
-if(friendlyMessage){
-
-
-await friendlyMessage.edit({
-
-embeds:[
-friendlyEmbed()
-],
-
-components:[
-friendlyButtons()
-]
-
-});
-
-
-}
-
-
-}
-
-
-});
-
-
-// ==========================
-// PART 2 GOES DIRECTLY BELOW
-// ==========================
-// ==========================
-// VVLL BOT PART 2/3
-// ==========================
-
-
-// League setup command
-commands.push(
-
-new SlashCommandBuilder()
-
-.setName("league-setup")
-
-.setDescription("Setup VVLL league schedule")
-
-.addRoleOption(o=>
-o.setName("team1")
-.setDescription("Team 1")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team2")
-.setDescription("Team 2")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team3")
-.setDescription("Team 3")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team4")
-.setDescription("Team 4")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team5")
-.setDescription("Team 5")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team6")
-.setDescription("Team 6")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team7")
-.setDescription("Team 7")
-.setRequired(true))
-
-.addRoleOption(o=>
-o.setName("team8")
-.setDescription("Team 8")
-.setRequired(true))
-
-
-);
-
-
-
-
-// League setup handler
-
-client.on("interactionCreate", async interaction=>{
-
-
-if(!interaction.isChatInputCommand())
-return;
-
+// League setup
 
 
 if(interaction.commandName==="league-setup"){
-
 
 
 if(!interaction.member.permissions.has(
@@ -580,7 +432,7 @@ interaction.options.getRole(`team${i}`)
 
 
 
-// Randomize order
+// Randomize
 
 leagueTeams.sort(
 ()=>Math.random()-0.5
@@ -588,74 +440,104 @@ leagueTeams.sort(
 
 
 
-let embed=
+leagueGames=[];
 
-new EmbedBuilder()
 
-.setColor("#ff0055")
 
-.setTitle("🏆 VVLL League Setup")
+for(let i=0;i<8;i+=2){
 
-.setDescription(
 
-leagueTeams.map(
+leagueGames.push({
 
-(team,index)=>
+home:leagueTeams[i],
 
-`${index+1}. ${team}`
+away:leagueTeams[i+1],
 
-).join("\n")
+time:null
 
-)
+});
 
-.setFooter({
 
-text:"Teams randomized"
+}
+
+
+
+let text="";
+
+
+
+leagueGames.forEach((game,index)=>{
+
+
+text +=
+
+`
+⚽ **Game ${index+1}**
+
+🏠 ${game.home}
+🚌 ${game.away}
+
+⏰ Time:
+Not Set
+
+────────────
+`;
 
 });
 
 
 
-await interaction.reply({
+let embed =
+new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle("🏆 VVLL League Schedule")
+
+.setDescription(text);
+
+
+
+return interaction.reply({
 
 embeds:[embed]
 
 });
 
 
+}
+
+
 
 }
 
-});
+
+
+// Buttons
+
+
+if(interaction.isButton()){
 
 
 
-// ==========================
-// PART 3 GOES DIRECTLY BELOW
-// ==========================
-// ==========================
-// VVLL BOT PART 3/3
-// ==========================
+// Join friendly
+
+if(interaction.customId==="join"){
 
 
-// Schedule generator
+friendlyPlayers.set(
 
-client.on("interactionCreate", async interaction=>{
+interaction.user.id,
 
+Date.now()
 
-if(!interaction.isChatInputCommand())
-return;
-
-
-
-if(interaction.commandName==="league-randomize"){
+);
 
 
-if(leagueTeams.length < 8){
 
 return interaction.reply({
 
-content:"❌ Use /league-setup first",
+content:"✅ You joined the friendly",
 
 ephemeral:true
 
@@ -665,24 +547,47 @@ ephemeral:true
 
 
 
-let games=[];
+// Leave friendly
+
+if(interaction.customId==="leave"){
 
 
-// Simple random matchups
+friendlyPlayers.delete(
 
-let shuffled=[...leagueTeams]
-.sort(()=>Math.random()-0.5);
+interaction.user.id
 
-
-
-for(let i=0;i<shuffled.length;i+=2){
+);
 
 
-games.push({
 
-home:shuffled[i],
+return interaction.reply({
 
-away:shuffled[i+1]
+content:"❌ You left the friendly",
+
+ephemeral:true
+
+});
+
+}
+
+
+
+// Ref button
+
+if(interaction.customId==="ref"){
+
+
+
+if(!interaction.member.roles.cache.has(
+REF_ROLE_ID
+)){
+
+
+return interaction.reply({
+
+content:"❌ You need the Referee role.",
+
+ephemeral:true
 
 });
 
@@ -691,76 +596,55 @@ away:shuffled[i+1]
 
 
 
-let description="";
+let embed =
+EmbedBuilder.from(
+interaction.message.embeds[0]
+);
 
 
 
-games.forEach((game,index)=>{
+embed.setDescription(
+
+embed.data.description.replace(
+
+"❌ Needed",
+
+`✅ ${interaction.user}`
+
+)
+
+);
 
 
-let time =
-Math.floor(Date.now()/1000)
-+
-((index+1)*3600);
 
+return interaction.update({
 
+embeds:[embed],
 
-description +=
-
-`
-⚽ **Game ${index+1}**
-
-🏠 ${game.home}
-🚌 ${game.away}
-
-⏰ <t:${time}:F>
-
-🧑‍⚖️ Ref Needed
-⚠️ Requires 1+ referee
-
-────────────
-`;
-
-
+components:[]
 
 });
 
 
-
-let embed=
-
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("🏆 VVLL League Schedule")
-
-.setDescription(description);
-
-
-
-await interaction.reply({
-
-embeds:[embed]
-
-});
+}
 
 
 
 }
 
 
+
 });
 
 
 
-
-// Auto remove friendly players after 2 hours
+// Remove friendly players after 2 hours
 
 setInterval(()=>{
 
 
 let now=Date.now();
+
 
 
 for(let [id,time] of friendlyPlayers){
@@ -782,7 +666,6 @@ friendlyPlayers.delete(id);
 
 
 
-
-// Final login
+// Start bot
 
 client.login(process.env.TOKEN);
