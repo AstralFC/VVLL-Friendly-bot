@@ -459,9 +459,9 @@ new ButtonBuilder()
 );
 
 
+}
 
-
-try{
+try {
 
 
 await player.send({
