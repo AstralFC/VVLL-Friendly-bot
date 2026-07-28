@@ -8,7 +8,6 @@ const fs = require("fs");
 const FILE = "./vvll-data.json";
 
 
-
 // ===============================
 // DEFAULT DATA
 // ===============================
@@ -25,9 +24,7 @@ let db = {
 
         teams: [],
 
-        games: [],
-
-        currentGame: 0
+        games: []
 
     },
 
@@ -35,10 +32,12 @@ let db = {
     players: [],
 
 
-    contracts: []
+    contracts: [],
+
+
+    matches: []
 
 };
-
 
 
 
@@ -48,24 +47,19 @@ let db = {
 
 if(fs.existsSync(FILE)){
 
-
-    db =
-    JSON.parse(
+    db = JSON.parse(
         fs.readFileSync(FILE)
     );
-
 
 }
 
 
 
-
 // ===============================
-// SAVE DATA
+// SAVE
 // ===============================
 
 function save(){
-
 
     fs.writeFileSync(
 
@@ -79,27 +73,17 @@ function save(){
 
     );
 
-
 }
 
 
 
 // ===============================
-// MATCHES
+// MATCH SYSTEM
 // ===============================
 
 function addMatch(match){
 
-
-    if(!db.matches){
-
-        db.matches = [];
-
-    }
-
-
     db.matches.push(match);
-
 
     save();
 
@@ -107,12 +91,9 @@ function addMatch(match){
 
 
 
-
 function getMatches(){
 
-
-    return db.matches || [];
-
+    return db.matches;
 
 }
 
@@ -122,38 +103,86 @@ function getMatches(){
 // PLAYER SYSTEM
 // ===============================
 
-
 function addPlayer(id,name){
 
 
-    let player =
-    db.players.find(
-        p=>p.id===id
-    );
+let player =
+db.players.find(
+p=>p.id===id
+);
 
 
-    if(!player){
+
+if(!player){
 
 
-        db.players.push({
+db.players.push({
 
-            id,
+id:id,
 
-            name,
+name:name,
 
-            goals:0,
+goals:0,
 
-            saves:0,
+saves:0,
 
-            blocks:0
+blocks:0
 
-        });
-
-
-    }
+});
 
 
-    save();
+}
+
+
+save();
+
+
+}
+
+
+
+function updateStats(id,type){
+
+
+let player =
+db.players.find(
+p=>p.id===id
+);
+
+
+
+if(!player){
+
+return;
+
+}
+
+
+
+if(type==="goal"){
+
+player.goals++;
+
+}
+
+
+if(type==="save"){
+
+player.saves++;
+
+}
+
+
+if(type==="block"){
+
+player.blocks++;
+
+}
+
+
+
+save();
+
 
 }
 
@@ -162,51 +191,41 @@ function addPlayer(id,name){
 
 function getPlayers(){
 
-
-    return db.players;
-
+return db.players;
 
 }
 
 
 
-
 // ===============================
-// STANDINGS
+// QUEUE TIMER CLEANER
 // ===============================
 
-
-function getStandings(){
-
-
-let standings = [];
+function cleanQueue(){
 
 
-db.league.teams.forEach(team=>{
+let now = Date.now();
 
 
-    standings.push({
+db.queue =
+db.queue.filter(player=>{
 
-        id:team.id,
 
-        name:team.name,
-
-        points:0,
-
-        goals:0
-
-    });
+return now - player.time < 3600000;
 
 
 });
 
 
-
-return standings;
+save();
 
 
 }
 
+
+
+
+setInterval(cleanQueue,60000);
 
 
 
@@ -215,16 +234,12 @@ return standings;
 // EXPORT
 // ===============================
 
-module.exports = {
+module.exports={
 
 
 db,
 
 save,
-
-
-queue:
-db.queue,
 
 
 addMatch,
@@ -234,10 +249,9 @@ getMatches,
 
 addPlayer,
 
-getPlayers,
+updateStats,
 
-
-getStandings
+getPlayers
 
 
 };
