@@ -2,185 +2,110 @@
 // VVLL LEAGUE SETUP 1/2
 // ===============================
 
+if(interaction.commandName === "league-setup") {
 
-// ADD THIS IN YOUR COMMANDS ARRAY
+    league.teams = [];
+    league.games = [];
+    league.current = 0;
 
-new SlashCommandBuilder()
 
-.setName("league-setup")
+    // Get selected teams
 
-.setDescription("Setup VVLL League")
+    for(let i = 1; i <= 8; i++) {
 
-.addRoleOption(o =>
-o.setName("team1")
-.setDescription("Team 1")
-.setRequired(true))
+        let team = interaction.options.getRole(`team${i}`);
 
-.addRoleOption(o =>
-o.setName("team2")
-.setDescription("Team 2")
-.setRequired(true))
+        league.teams.push(team);
 
-.addRoleOption(o =>
-o.setName("team3")
-.setDescription("Team 3")
-.setRequired(true))
+    }
 
-.addRoleOption(o =>
-o.setName("team4")
-.setDescription("Team 4")
-.setRequired(true))
 
-.addRoleOption(o =>
-o.setName("team5")
-.setDescription("Team 5")
-.setRequired(true))
+    // Randomize teams
 
-.addRoleOption(o =>
-o.setName("team6")
-.setDescription("Team 6")
-.setRequired(true))
-
-.addRoleOption(o =>
-o.setName("team7")
-.setDescription("Team 7")
-.setRequired(true))
-
-.addRoleOption(o =>
-o.setName("team8")
-.setDescription("Team 8")
-.setRequired(true)),
+    league.teams.sort(() => Math.random() - 0.5);
 
 
 
+    // Create matchups
 
-// ===============================
-// PUT THIS INSIDE interactionCreate
-// ===============================
+    for(let i = 0; i < league.teams.length; i += 2) {
 
+        league.games.push({
 
-if(interaction.commandName === "league-setup"){
+            home: league.teams[i],
 
+            away: league.teams[i + 1],
 
-league.teams = [];
+            time: null
 
+        });
 
-// Get all teams
-
-for(let i = 1; i <= 8; i++){
-
-let team =
-interaction.options.getRole(`team${i}`);
-
-league.teams.push(team);
-
-}
+    }
 
 
 
-// Randomize teams
+    let matches = "";
 
-league.teams.sort(
-() => Math.random() - 0.5
-);
+    league.games.forEach((game,index)=>{
 
-
-
-// Create games
-
-league.games = [];
-
-
-for(let i = 0; i < 8; i += 2){
-
-
-league.games.push({
-
-home: league.teams[i],
-
-away: league.teams[i+1],
-
-time: null
-
-});
-
-
-}
-
-
-
-let matchupText = "";
-
-
-league.games.forEach((game,index)=>{
-
-
-matchupText +=
-
+        matches +=
 `
-⚽ **Game ${index+1}**
+⚽ **Game ${index + 1}**
 
-${game.home}
+🏠 ${game.home}
 
 VS
 
-${game.away}
+🚌 ${game.away}
 
 `;
 
-});
+    });
 
 
 
+    const embed = new EmbedBuilder()
 
-let embed = new EmbedBuilder()
+    .setColor("#ff0055")
 
-.setColor("#ff0055")
+    .setTitle("🏆 VVLL League Matchups")
 
-.setTitle("🏆 VVLL League Setup")
-
-.setDescription(
-
-`
-✅ Teams Randomized!
-
-
-${matchupText}
-
-
-Next step:
-⏰ Add game times
+    .setDescription(
 
 `
-
-);
-
+${matches}
 
 
-let button = new ActionRowBuilder()
+Click the button below when you are ready to add times.
+`
 
-.addComponents(
-
-new ButtonBuilder()
-
-.setCustomId("league_add_time")
-
-.setLabel("⏰ Add Times")
-
-.setStyle(ButtonStyle.Primary)
-
-);
+    );
 
 
 
-return interaction.reply({
+    const row = new ActionRowBuilder()
 
-embeds:[embed],
+    .addComponents(
 
-components:[button]
+        new ButtonBuilder()
 
-});
+        .setCustomId("league_add_time")
 
+        .setLabel("⏰ Add Game Times")
+
+        .setStyle(ButtonStyle.Primary)
+
+    );
+
+
+
+    return interaction.reply({
+
+        embeds:[embed],
+
+        components:[row]
+
+    });
 
 }
 // ===============================
@@ -196,6 +121,8 @@ if(interaction.isButton()){
 if(interaction.customId === "league_add_time"){
 
 
+let game = league.games[league.current];
+
 
 let modal = new ModalBuilder()
 
@@ -209,12 +136,12 @@ let modal = new ModalBuilder()
 
 let input = new TextInputBuilder()
 
-.setCustomId("game_time")
+.setCustomId("time")
 
-.setLabel("Enter date and time")
+.setLabel("Enter game date and time")
 
 .setPlaceholder(
-"Example: July 30 6:00 PM"
+"July 30 6:00 PM"
 )
 
 .setStyle(TextInputStyle.Short);
@@ -241,25 +168,20 @@ return interaction.showModal(modal);
 
 
 
-// SAVE TIME
+// SAVE GAME TIMES
 
 
 if(interaction.isModalSubmit()){
+
 
 
 if(interaction.customId === "league_time_modal"){
 
 
 
-let time =
+league.games[league.current].time =
 
-interaction.fields.getTextInputValue(
-"game_time"
-);
-
-
-
-league.games[league.current].time = time;
+interaction.fields.getTextInputValue("time");
 
 
 
@@ -267,15 +189,12 @@ league.current++;
 
 
 
-// More games left
-
+// More games
 
 if(league.current < league.games.length){
 
 
-
 let next = league.games[league.current];
-
 
 
 let embed = new EmbedBuilder()
@@ -283,7 +202,7 @@ let embed = new EmbedBuilder()
 .setColor("#ff0055")
 
 .setTitle(
-`⏰ Game ${league.current + 1} Time`
+`⏰ Game ${league.current + 1}`
 )
 
 .setDescription(
@@ -304,13 +223,7 @@ Enter the time for this game.
 
 
 
-return interaction.reply({
-
-embeds:[embed],
-
-components:[
-
-new ActionRowBuilder()
+let row = new ActionRowBuilder()
 
 .addComponents(
 
@@ -322,9 +235,15 @@ new ButtonBuilder()
 
 .setStyle(ButtonStyle.Primary)
 
-)
+);
 
-]
+
+
+return interaction.reply({
+
+embeds:[embed],
+
+components:[row]
 
 });
 
@@ -334,7 +253,7 @@ new ButtonBuilder()
 
 
 
-// FINISHED
+// FINISHED SCHEDULE
 
 
 let schedule = "";
@@ -344,23 +263,23 @@ let schedule = "";
 league.games.forEach((game,index)=>{
 
 
-let stamp = game.time;
-
-
 schedule +=
 
 `
-⚽ **Game ${index+1}**
+⚽ **Game ${index + 1}**
 
 🏠 ${game.home}
+
+VS
 
 🚌 ${game.away}
 
 
-⏰ ${stamp}
+⏰ ${game.time}
 
 
 🧑‍⚖️ Ref Needed
+
 
 ────────────
 
@@ -376,7 +295,7 @@ let finalEmbed = new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("🏆 VVLL Final League Schedule")
+.setTitle("🏆 VVLL Final Schedule")
 
 .setDescription(schedule);
 
