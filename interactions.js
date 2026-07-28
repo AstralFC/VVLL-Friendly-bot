@@ -4,17 +4,12 @@
 // ===============================
 
 const {
-EmbedBuilder,
-ActionRowBuilder,
-ButtonBuilder,
-ButtonStyle,
-ModalBuilder,
-TextInputBuilder,
-TextInputStyle
+EmbedBuilder
 } = require("discord.js");
 
 
-const database = require("./database");
+const database =
+require("./database");
 
 
 
@@ -27,34 +22,36 @@ async function button(interaction){
 
 
 // ===============================
-// FRIENDLY QUEUE JOIN
+// QUEUE JOIN
 // ===============================
 
-if(interaction.customId === "queue_join"){
-
-
-let user =
-interaction.user.id;
+if(interaction.customId==="queue_join"){
 
 
 
-if(database.queue.includes(user)){
+let roleID =
+"FRIENDLY_ROLE_ID_HERE";
 
 
-return interaction.reply({
 
-content:"❌ You are already in the queue.",
+if(!interaction.member.roles.cache.has(roleID)){
 
-ephemeral:true
 
-});
+await interaction.member.roles.add(roleID);
 
 
 }
 
 
 
-database.queue.push(user);
+database.db.queue.push({
+
+id:interaction.user.id,
+
+time:Date.now()
+
+});
+
 
 database.save();
 
@@ -63,7 +60,7 @@ database.save();
 return interaction.reply({
 
 content:
-"✅ You joined the friendly queue!",
+"✅ You joined the friendly queue! You have 1 hour.",
 
 ephemeral:true
 
@@ -75,23 +72,27 @@ ephemeral:true
 
 
 
-
 // ===============================
-// FRIENDLY QUEUE LEAVE
+// QUEUE LEAVE
 // ===============================
 
 
-if(interaction.customId === "queue_leave"){
-
-
-let user =
-interaction.user.id;
+if(interaction.customId==="queue_leave"){
 
 
 
-database.queue =
-database.queue.filter(
-(id)=>id !== user
+let roleID =
+"FRIENDLY_ROLE_ID_HERE";
+
+
+
+await interaction.member.roles.remove(roleID);
+
+
+
+database.db.queue =
+database.db.queue.filter(
+p=>p.id !== interaction.user.id
 );
 
 
@@ -103,7 +104,7 @@ database.save();
 return interaction.reply({
 
 content:
-"❌ You left the queue.",
+"❌ You left the friendly queue.",
 
 ephemeral:true
 
@@ -120,10 +121,10 @@ ephemeral:true
 // ===============================
 
 
-if(interaction.customId === "claim_ref"){
+if(interaction.customId==="claim_ref"){
 
 
-const REF_ROLE =
+let REF_ROLE =
 "1521782877950447740";
 
 
@@ -162,17 +163,19 @@ content:
 
 
 // ===============================
-// ACCEPT CONTRACT
+// CONTRACT ACCEPT
 // ===============================
 
 
 if(
-interaction.customId.startsWith("accept_")
+interaction.customId.startsWith(
+"accept_contract_"
+)
 ){
 
 
 let teamID =
-interaction.customId.split("_")[1];
+interaction.customId.split("_")[2];
 
 
 
@@ -199,12 +202,12 @@ components:[]
 
 
 // ===============================
-// DECLINE CONTRACT
+// CONTRACT DECLINE
 // ===============================
 
 
 if(
-interaction.customId === "decline_contract"
+interaction.customId==="decline_contract"
 ){
 
 
@@ -223,8 +226,8 @@ components:[]
 }
 
 
-
 }
+
 
 
 
@@ -235,10 +238,7 @@ components:[]
 async function modal(interaction){
 
 
-// Result modal will be added here
-// with goals, saves, blocks
-
-
+return;
 
 }
 
@@ -246,7 +246,7 @@ async function modal(interaction){
 
 
 
-module.exports = {
+module.exports={
 
 button,
 
