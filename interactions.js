@@ -30,7 +30,7 @@ if(interaction.customId==="queue_join"){
 
 
 let roleID =
-"FRIENDLY_ROLE_ID_HERE";
+"1531405293509017790";
 
 
 
@@ -82,7 +82,7 @@ if(interaction.customId==="queue_leave"){
 
 
 let roleID =
-"FRIENDLY_ROLE_ID_HERE";
+"1531405293509017790";
 
 
 
