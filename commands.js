@@ -11,6 +11,7 @@ EmbedBuilder
 const database = require("./database");
 
 
+
 // =================================
 // COMMAND LIST
 // =================================
@@ -20,74 +21,37 @@ const commands = [
 
 new SlashCommandBuilder()
 
-.setName("setup")
+.setName("queue")
 
 .setDescription(
-"Create friendly queue"
+"Open VVLL friendly queue"
 ),
 
 
 
 new SlashCommandBuilder()
 
-.setName("create-game")
+.setName("match-create")
 
 .setDescription(
-"Create a VVLL game"
+"Create a VVLL match"
 )
 
-.addRoleOption(option=>
-option
-.setName("home")
+.addRoleOption(o=>
+o.setName("home")
 .setDescription("Home team")
 .setRequired(true)
 )
 
-.addRoleOption(option=>
-option
-.setName("away")
+.addRoleOption(o=>
+o.setName("away")
 .setDescription("Away team")
 .setRequired(true)
 )
 
-.addStringOption(option=>
-option
-.setName("time")
-.setDescription("Example: <t:1234567890:F>")
-.setRequired(true)
-),
-
-
-
-new SlashCommandBuilder()
-
-.setName("league-setup")
-
-.setDescription(
-"Create league fixtures"
-),
-
-
-
-new SlashCommandBuilder()
-
-.setName("sign")
-
-.setDescription(
-"Sign a player"
-)
-
-.addUserOption(option=>
-option
-.setName("player")
-.setDescription("Player to sign")
-.setRequired(true)
-)
-
-.addRoleOption(option=>
-option
-.setName("team")
-.setDescription("Team role")
+.addStringOption(o=>
+o.setName("time")
+.setDescription("Match timestamp")
 .setRequired(true)
 ),
 
@@ -98,7 +62,13 @@ new SlashCommandBuilder()
 .setName("result")
 
 .setDescription(
-"Add match result"
+"Submit match result"
+)
+
+.addStringOption(o=>
+o.setName("score")
+.setDescription("Example: 5-3")
+.setRequired(true)
 ),
 
 
@@ -109,6 +79,12 @@ new SlashCommandBuilder()
 
 .setDescription(
 "View player stats"
+)
+
+.addUserOption(o=>
+o.setName("player")
+.setDescription("Player")
+.setRequired(true)
 ),
 
 
@@ -118,7 +94,29 @@ new SlashCommandBuilder()
 .setName("standings")
 
 .setDescription(
-"View standings"
+"View VVLL standings"
+),
+
+
+
+new SlashCommandBuilder()
+
+.setName("sign")
+
+.setDescription(
+"Send player contract"
+)
+
+.addUserOption(o=>
+o.setName("player")
+.setDescription("Player to sign")
+.setRequired(true)
+)
+
+.addRoleOption(o=>
+o.setName("team")
+.setDescription("Team role")
+.setRequired(true)
 )
 
 
@@ -145,13 +143,11 @@ Routes
 
 
 
-const rest = new REST({
-
+const rest =
+new REST({
 version:"10"
-
 })
 .setToken(process.env.TOKEN);
-
 
 
 
@@ -169,7 +165,7 @@ client.user.id,
 
 body:
 commands.map(
-command=>command.toJSON()
+c=>c.toJSON()
 )
 
 }
@@ -179,7 +175,7 @@ command=>command.toJSON()
 
 
 console.log(
-"✅ VVLL commands registered"
+"✅ VVLL Commands Loaded"
 );
 
 
@@ -196,8 +192,10 @@ async function run(interaction){
 
 
 
+// QUEUE
+
 if(
-interaction.commandName==="setup"
+interaction.commandName==="queue"
 ){
 
 
@@ -212,69 +210,17 @@ new EmbedBuilder()
 
 .setDescription(
 
-"Nobody joined yet.\n\n⏰ Time: 1 Hour"
+`
+Nobody joined yet.
+
+⏰ Queue expires:
+1 Hour
+
+Players receive:
+🎮 Friendly role
+`
 
 );
-
-
-
-return interaction.reply({
-
-embeds:[embed],
-
-components:[]
-
-});
-
-
-}
-
-
-
-
-
-if(
-interaction.commandName==="create-game"
-){
-
-
-database.addMatch({
-
-home:
-interaction.options.getRole("home").id,
-
-
-away:
-interaction.options.getRole("away").id,
-
-
-time:
-interaction.options.getString("time")
-
-});
-
-
-
-let embed =
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle(
-"⚽ VVLL Match"
-)
-
-.setDescription(`
-
-🏠 Home:
-${interaction.options.getRole("home")}
-
-🚌 Away:
-${interaction.options.getRole("away")}
-
-⏰ ${interaction.options.getString("time")}
-
-`);
 
 
 
@@ -290,8 +236,86 @@ embeds:[embed]
 
 
 
+// MATCH CREATE
+
+if(
+interaction.commandName==="match-create"
+){
+
+
+let home =
+interaction.options.getRole("home");
+
+
+let away =
+interaction.options.getRole("away");
+
+
+let time =
+interaction.options.getString("time");
+
+
+
+let embed =
+new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle(
+"🏆 VVLL Match"
+)
+
+.setDescription(
+
+`
+🏠 Home:
+${home}
+
+
+🚌 Away:
+${away}
+
+
+⏰ Time:
+${time}
+
+
+Status:
+🟡 Waiting
+`
+
+);
+
+
+
+database.db.matches.push({
+
+home:home.id,
+
+away:away.id,
+
+time:time
+
+});
+
+
+database.save();
+
+
+
+return interaction.reply({
+
+embeds:[embed]
+
+});
+
+
+}
+
+
+
 // ================================
-// ADD PART 2/3 UNDER THIS LINE
+// ADD 2/3 UNDER THIS LINE
 // ================================
 // =================================
 // VVLL LEAGUE BOT
@@ -299,13 +323,19 @@ embeds:[embed]
 // =================================
 
 
+
 // ================================
-// LEAGUE SETUP
+// MATCH RESULT
 // ================================
 
 if(
-interaction.commandName==="league-setup"
+interaction.commandName==="result"
 ){
+
+
+let score =
+interaction.options.getString("score");
+
 
 
 let embed =
@@ -314,11 +344,29 @@ new EmbedBuilder()
 .setColor("#ff0055")
 
 .setTitle(
-"🏆 VVLL League Setup"
+"⚽ VVLL Match Result"
 )
 
 .setDescription(
-"League setup system ready.\n\nOwner panel will add teams here."
+
+`
+Final Score:
+
+${score}
+
+
+Add player performances:
+
+⚽ Goals
+
+🧤 Saves
+
+🧱 Blocks
+
+
+Use the stats panel to add players.
+`
+
 );
 
 
@@ -335,13 +383,176 @@ embeds:[embed]
 
 
 
+
 // ================================
-// SIGN SYSTEM
+// PLAYER STATS
+// ================================
+
+if(
+interaction.commandName==="stats"
+){
+
+
+let user =
+interaction.options.getUser("player");
+
+
+
+let player =
+database.db.players.find(
+
+p=>p.id===user.id
+
+);
+
+
+
+if(!player){
+
+
+return interaction.reply({
+
+content:
+"❌ This player has no stats yet.",
+
+ephemeral:true
+
+});
+
+
+}
+
+
+
+
+let embed =
+new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle(
+"📊 VVLL Player Stats"
+)
+
+.setDescription(
+
+`
+👤 ${user}
+
+
+⚽ Goals:
+${player.goals || 0}
+
+
+🧤 Saves:
+${player.saves || 0}
+
+
+🧱 Blocks:
+${player.blocks || 0}
+
+
+🏆 Matches:
+${player.matches || 0}
+
+`
+
+);
+
+
+
+return interaction.reply({
+
+embeds:[embed]
+
+});
+
+
+}
+
+
+
+
+
+// ================================
+// STANDINGS
+// ================================
+
+if(
+interaction.commandName==="standings"
+){
+
+
+
+let teams =
+database.db.teams;
+
+
+
+if(!teams.length){
+
+
+return interaction.reply({
+
+content:
+"❌ No teams created yet.",
+
+ephemeral:true
+
+});
+
+
+}
+
+
+
+let table =
+teams.map((team,i)=>`
+
+**${i+1}. ${team.name}**
+
+🏆 Points: ${team.points || 0}
+
+⚽ Goals: ${team.goals || 0}
+
+`).join("\n");
+
+
+
+let embed =
+new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle(
+"🏆 VVLL League Table"
+)
+
+.setDescription(table);
+
+
+
+return interaction.reply({
+
+embeds:[embed]
+
+});
+
+
+}
+
+
+
+
+
+// ================================
+// SIGN CONTRACT
 // ================================
 
 if(
 interaction.commandName==="sign"
 ){
+
 
 
 let player =
@@ -359,23 +570,28 @@ new EmbedBuilder()
 .setColor("#ff0055")
 
 .setTitle(
-"📄 VVLL Contract Offer"
+"📄 VVLL CONTRACT OFFER"
 )
 
-.setDescription(`
+.setDescription(
 
-You have received a contract.
+`
+⚽ You have received a contract offer.
+
 
 🏆 Team:
 ${team}
 
+
 👤 Manager:
 ${interaction.user}
 
-Do you accept?
 
-`);
+Press accept or decline.
 
+`
+
+);
 
 
 
@@ -394,33 +610,6 @@ database.save();
 
 
 
-try{
-
-
-await player.send({
-
-embeds:[embed]
-
-});
-
-
-}catch{
-
-
-return interaction.reply({
-
-content:
-"❌ Cannot DM this player.",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
 return interaction.reply({
 
 content:
@@ -435,130 +624,8 @@ ephemeral:true
 
 
 
-
 // ================================
-// RESULT
-// ================================
-
-if(
-interaction.commandName==="result"
-){
-
-
-let embed =
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle(
-"⚽ VVLL Result"
-)
-
-.setDescription(`
-
-Select:
-
-🏠 Home Team
-
-🚌 Away Team
-
-Then add player stats:
-
-⚽ Goals
-
-🧤 Saves
-
-🧱 Blocks
-
-`);
-
-
-
-return interaction.reply({
-
-embeds:[embed],
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-
-// ================================
-// STATS
-// ================================
-
-if(
-interaction.commandName==="stats"
-){
-
-
-let players =
-database.db.players;
-
-
-if(players.length===0){
-
-
-return interaction.reply({
-
-content:
-"❌ No stats yet.",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-let text =
-players.map(player=>`
-
-👤 ${player.name}
-
-⚽ Goals: ${player.goals}
-
-🧤 Saves: ${player.saves}
-
-🧱 Blocks: ${player.blocks}
-
-`).join("\n");
-
-
-
-let embed =
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle(
-"📊 VVLL Player Stats"
-)
-
-.setDescription(text);
-
-
-
-return interaction.reply({
-
-embeds:[embed]
-
-});
-
-
-}
-
-
-
-// ================================
-// ADD PART 3/3 UNDER THIS LINE
+// ADD 3/3 UNDER THIS LINE
 // ================================
 // =================================
 // VVLL LEAGUE BOT
@@ -567,83 +634,18 @@ embeds:[embed]
 
 
 // ================================
-// STANDINGS
+// CLOSE COMMAND HANDLER
 // ================================
 
-if(
-interaction.commandName==="standings"
-){
-
-
-let teams =
-database.db.teams;
-
-
-
-if(!teams || teams.length===0){
-
-
-return interaction.reply({
-
-content:
-"❌ No teams created yet.",
-
-ephemeral:true
-
-});
-
-
 }
 
 
 
-let table =
-teams.map((team,index)=>`
-
-${index+1}. ${team.name}
-
-🏆 Points: ${team.points || 0}
-
-⚽ Goals: ${team.goals || 0}
-
-`).join("\n");
-
-
-
-
-let embed =
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle(
-"🏆 VVLL Standings"
-)
-
-.setDescription(table);
-
-
-
-return interaction.reply({
-
-embeds:[embed]
-
-});
-
-
-}
-
-
-
-}
-
-
-
-// =================================
+// ================================
 // EXPORTS
-// =================================
+// ================================
 
-module.exports={
+module.exports = {
 
 commands,
 
@@ -655,5 +657,5 @@ run
 
 
 // =================================
-// END OF COMMANDS.JS
+// END COMMANDS.JS
 // =================================
