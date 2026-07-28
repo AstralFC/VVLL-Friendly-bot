@@ -1,414 +1,390 @@
 // ===============================
-// VVLL BOT INDEX.JS PART 1/2
+// VVLL LEAGUE SETUP 1/2
 // ===============================
 
-require("dotenv").config();
 
-const {
-Client,
-GatewayIntentBits,
-EmbedBuilder,
-ActionRowBuilder,
-ButtonBuilder,
-ButtonStyle,
-SlashCommandBuilder,
-REST,
-Routes
-} = require("discord.js");
+// ADD THIS IN YOUR COMMANDS ARRAY
+
+new SlashCommandBuilder()
+
+.setName("league-setup")
+
+.setDescription("Setup VVLL League")
+
+.addRoleOption(o =>
+o.setName("team1")
+.setDescription("Team 1")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team2")
+.setDescription("Team 2")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team3")
+.setDescription("Team 3")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team4")
+.setDescription("Team 4")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team5")
+.setDescription("Team 5")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team6")
+.setDescription("Team 6")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team7")
+.setDescription("Team 7")
+.setRequired(true))
+
+.addRoleOption(o =>
+o.setName("team8")
+.setDescription("Team 8")
+.setRequired(true)),
 
 
-const client = new Client({
 
-intents:[
 
-GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMembers
+// ===============================
+// PUT THIS INSIDE interactionCreate
+// ===============================
+
+
+if(interaction.commandName === "league-setup"){
+
+
+league.teams = [];
+
+
+// Get all teams
+
+for(let i = 1; i <= 8; i++){
+
+let team =
+interaction.options.getRole(`team${i}`);
+
+league.teams.push(team);
+
+}
+
+
+
+// Randomize teams
+
+league.teams.sort(
+() => Math.random() - 0.5
+);
+
+
+
+// Create games
+
+league.games = [];
+
+
+for(let i = 0; i < 8; i += 2){
+
+
+league.games.push({
+
+home: league.teams[i],
+
+away: league.teams[i+1],
+
+time: null
+
+});
+
+
+}
+
+
+
+let matchupText = "";
+
+
+league.games.forEach((game,index)=>{
+
+
+matchupText +=
+
+`
+⚽ **Game ${index+1}**
+
+${game.home}
+
+VS
+
+${game.away}
+
+`;
+
+});
+
+
+
+
+let embed = new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle("🏆 VVLL League Setup")
+
+.setDescription(
+
+`
+✅ Teams Randomized!
+
+
+${matchupText}
+
+
+Next step:
+⏰ Add game times
+
+`
+
+);
+
+
+
+let button = new ActionRowBuilder()
+
+.addComponents(
+
+new ButtonBuilder()
+
+.setCustomId("league_add_time")
+
+.setLabel("⏰ Add Times")
+
+.setStyle(ButtonStyle.Primary)
+
+);
+
+
+
+return interaction.reply({
+
+embeds:[embed],
+
+components:[button]
+
+});
+
+
+}
+// ===============================
+// VVLL LEAGUE SETUP 2/2
+// ===============================
+
+
+// ADD TIME BUTTON
+
+if(interaction.isButton()){
+
+
+if(interaction.customId === "league_add_time"){
+
+
+
+let modal = new ModalBuilder()
+
+.setCustomId("league_time_modal")
+
+.setTitle(
+`Game ${league.current + 1} Time`
+);
+
+
+
+let input = new TextInputBuilder()
+
+.setCustomId("game_time")
+
+.setLabel("Enter date and time")
+
+.setPlaceholder(
+"Example: July 30 6:00 PM"
+)
+
+.setStyle(TextInputStyle.Short);
+
+
+
+modal.addComponents(
+
+new ActionRowBuilder()
+
+.addComponents(input)
+
+);
+
+
+
+return interaction.showModal(modal);
+
+
+}
+
+
+}
+
+
+
+// SAVE TIME
+
+
+if(interaction.isModalSubmit()){
+
+
+if(interaction.customId === "league_time_modal"){
+
+
+
+let time =
+
+interaction.fields.getTextInputValue(
+"game_time"
+);
+
+
+
+league.games[league.current].time = time;
+
+
+
+league.current++;
+
+
+
+// More games left
+
+
+if(league.current < league.games.length){
+
+
+
+let next = league.games[league.current];
+
+
+
+let embed = new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle(
+`⏰ Game ${league.current + 1} Time`
+)
+
+.setDescription(
+
+`
+⚽ ${next.home}
+
+VS
+
+${next.away}
+
+
+Enter the time for this game.
+
+`
+
+);
+
+
+
+return interaction.reply({
+
+embeds:[embed],
+
+components:[
+
+new ActionRowBuilder()
+
+.addComponents(
+
+new ButtonBuilder()
+
+.setCustomId("league_add_time")
+
+.setLabel("Add Time")
+
+.setStyle(ButtonStyle.Primary)
+
+)
 
 ]
 
 });
 
 
-// ===============================
-// IDS
-// ===============================
-
-const REF_ROLE_ID = "1521782877950447740";
-const FRIENDLY_ROLE_ID = "1531405293509017790";
-
-
-// ===============================
-// DATA
-// ===============================
-
-let friendlyPlayers = [];
-
-let friendlyMessage = null;
-
-
-
-let league = {
-
-teams:[],
-games:[],
-current:0
-
-};
-
-
-
-// ===============================
-// COMMANDS
-// ===============================
-
-
-const commands = [
-
-
-new SlashCommandBuilder()
-
-.setName("setup")
-
-.setDescription("Start friendly queue"),
-
-
-
-new SlashCommandBuilder()
-
-.setName("create-game")
-
-.setDescription("Create a game")
-
-.addRoleOption(o=>
-
-o.setName("home")
-
-.setDescription("Home team")
-
-.setRequired(true)
-
-)
-
-
-.addRoleOption(o=>
-
-o.setName("away")
-
-.setDescription("Away team")
-
-.setRequired(true)
-
-)
-
-
-.addStringOption(o=>
-
-o.setName("time")
-
-.setDescription("Example 2h")
-
-.setRequired(true)
-
-)
-
-
-.addStringOption(o=>
-
-o.setName("format")
-
-.setDescription("4v4 - 11v11")
-
-.setRequired(true)
-
-)
-
-
-.addStringOption(o=>
-
-o.setName("stage")
-
-.setDescription("League stage")
-
-.setRequired(true)
-
-),
-
-
-
-new SlashCommandBuilder()
-
-.setName("league-setup")
-
-.setDescription("Create league")
-
-];
-
-
-
-// ===============================
-// READY
-// ===============================
-
-
-client.once("ready", async()=>{
-
-
-console.log(
-`${client.user.tag} online`
-);
-
-
-
-const rest = new REST({
-
-version:"10"
-
-}).setToken(process.env.TOKEN);
-
-
-
-await rest.put(
-
-Routes.applicationCommands(
-
-client.user.id
-
-),
-
-{
-
-body: commands.map(c=>c.toJSON())
-
-}
-
-);
-
-
-
-console.log("Commands registered");
-
-
-});
-
-
-
-// ===============================
-// TIME
-// ===============================
-
-
-function getSeconds(time){
-
-
-let number =
-parseInt(time);
-
-
-
-if(time.endsWith("m"))
-
-return number * 60;
-
-
-
-if(time.endsWith("h"))
-
-return number * 3600;
-
-
-
-if(time.endsWith("d"))
-
-return number * 86400;
-
-
-
-return null;
-
-
 }
 
 
 
-// ===============================
-// INTERACTIONS START
-// ===============================
+
+// FINISHED
 
 
-client.on("interactionCreate", async interaction=>{
-
-
-if(!interaction.isChatInputCommand())
-
-return;
+let schedule = "";
 
 
 
-// FRIENDLY SETUP
+league.games.forEach((game,index)=>{
 
 
-if(interaction.commandName === "setup"){
+let stamp = game.time;
 
 
-
-let embed = new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("⚽ VVLL Friendly Queue")
-
-.setDescription(
+schedule +=
 
 `
-🟢 Players:
+⚽ **Game ${index+1}**
 
-Nobody joined yet
+🏠 ${game.home}
 
+🚌 ${game.away}
 
-⏰ Timer:
 
-2 Hours
-
-`
-
-);
-
-
-
-let buttons = new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-
-.setCustomId("join_friendly")
-
-.setLabel("Join")
-
-.setStyle(ButtonStyle.Success),
-
-
-
-new ButtonBuilder()
-
-.setCustomId("leave_friendly")
-
-.setLabel("Leave")
-
-.setStyle(ButtonStyle.Danger)
-
-);
-
-
-
-let msg = await interaction.reply({
-
-embeds:[embed],
-
-components:[buttons],
-
-fetchReply:true
-
-});
-
-
-
-friendlyMessage = msg;
-
-
-
-}
-// ===============================
-// VVLL BOT INDEX.JS PART 2/2
-// ===============================
-
-
-
-// CREATE GAME
-
-if(interaction.commandName === "create-game"){
-
-
-let seconds =
-getSeconds(
-interaction.options.getString("time")
-);
-
-
-
-if(!seconds){
-
-return interaction.reply({
-
-content:"Use time like 30m, 2h, or 1d",
-
-ephemeral:true
-
-});
-
-}
-
-
-
-let timestamp =
-Math.floor(Date.now()/1000)+seconds;
-
-
-
-let embed = new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("⚽ VVLL Game")
-
-.setDescription(
-
-`
-🏠 ${interaction.options.getRole("home")}
-
-🚌 ${interaction.options.getRole("away")}
-
-
-📋 Format:
-${interaction.options.getString("format")}
-
-
-🏆 Stage:
-${interaction.options.getString("stage")}
-
-
-⏰ <t:${timestamp}:F>
+⏰ ${stamp}
 
 
 🧑‍⚖️ Ref Needed
 
-`
+────────────
 
-);
+`;
 
 
 
-let row = new ActionRowBuilder()
+});
 
-.addComponents(
 
-new ButtonBuilder()
 
-.setCustomId("claim_ref")
+let finalEmbed = new EmbedBuilder()
 
-.setLabel("🧑‍⚖️ Claim Ref")
+.setColor("#ff0055")
 
-.setStyle(ButtonStyle.Primary)
+.setTitle("🏆 VVLL Final League Schedule")
 
-)
+.setDescription(schedule);
 
 
 
 return interaction.reply({
 
-embeds:[embed],
-
-components:[row]
+embeds:[finalEmbed]
 
 });
 
@@ -416,197 +392,4 @@ components:[row]
 }
 
 
-
-});
-
-
-
-// ===============================
-// BUTTON HANDLER
-// ===============================
-
-
-client.on("interactionCreate", async interaction=>{
-
-
-if(!interaction.isButton())
-
-return;
-
-
-
-// JOIN FRIENDLY
-
-
-if(interaction.customId === "join_friendly"){
-
-
-
-if(!interaction.member.roles.cache.has(FRIENDLY_ROLE_ID)){
-
-
-return interaction.reply({
-
-content:"❌ You need the Friendly role.",
-
-ephemeral:true
-
-});
-
-
 }
-
-
-
-if(!friendlyPlayers.includes(interaction.user.id)){
-
-
-friendlyPlayers.push(
-interaction.user.id
-);
-
-
-}
-
-
-
-let players = friendlyPlayers
-.map(id=>`<@${id}>`)
-.join("\n");
-
-
-
-let embed =
-EmbedBuilder.from(
-interaction.message.embeds[0]
-);
-
-
-
-embed.setDescription(
-
-`
-🟢 Players:
-
-${players}
-
-
-⏰ Timer:
-
-2 Hours
-
-`
-
-);
-
-
-
-return interaction.update({
-
-embeds:[embed]
-
-});
-
-
-}
-
-
-
-// LEAVE FRIENDLY
-
-
-if(interaction.customId === "leave_friendly"){
-
-
-
-friendlyPlayers =
-friendlyPlayers.filter(
-
-id=>id !== interaction.user.id
-
-);
-
-
-
-return interaction.reply({
-
-content:"❌ Left queue",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-
-// CLAIM REF
-
-
-if(interaction.customId === "claim_ref"){
-
-
-
-if(!interaction.member.roles.cache.has(REF_ROLE_ID)){
-
-
-return interaction.reply({
-
-content:"❌ You need the Ref role.",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-let embed =
-EmbedBuilder.from(
-interaction.message.embeds[0]
-);
-
-
-
-embed.setDescription(
-
-embed.data.description.replace(
-
-"🧑‍⚖️ Ref Needed",
-
-`🧑‍⚖️ Referee: ${interaction.user}`
-
-)
-
-);
-
-
-
-return interaction.update({
-
-embeds:[embed],
-
-components:[]
-
-});
-
-
-}
-
-
-
-});
-
-
-
-
-// ===============================
-// LOGIN
-// ===============================
-
-
-client.login(process.env.TOKEN);
