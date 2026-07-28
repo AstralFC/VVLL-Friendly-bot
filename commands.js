@@ -1,3 +1,4 @@
+console.log("✅ NEW COMMANDS.JS LOADED");
 // ===============================
 // VVLL LEAGUE BOT
 // COMMANDS.JS 1/3
