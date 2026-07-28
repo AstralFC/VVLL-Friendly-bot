@@ -1,3 +1,4 @@
+console.log("✅ NEW INDEX.JS LOADED");
 // ===============================
 // VVLL LEAGUE BOT
 // INDEX.JS
