@@ -1,49 +1,161 @@
+// ===============================
+// VVLL LEAGUE BOT
+// INDEX.JS
+// ===============================
+
 require("dotenv").config();
 
-const { Client, GatewayIntentBits } = require("discord.js");
+
+const {
+Client,
+GatewayIntentBits
+} = require("discord.js");
+
+
+const commands =
+require("./commands");
+
+
+const interactions =
+require("./interactions");
+
+
+
+// ===============================
+// CLIENT
+// ===============================
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers
-    ]
-});
 
-// Load Files
-const database = require("./database");
-const commands = require("./commands");
-const interactions = require("./interactions");
+intents:[
 
-// Ready
-client.once("ready", async () => {
-    console.log(`✅ ${client.user.tag} is online`);
+GatewayIntentBits.Guilds,
 
-    // Connect database
-    await database.connect();
+GatewayIntentBits.GuildMembers
 
-    // Register slash commands
-    await commands.register(client);
-
-    console.log("✅ Database Connected");
-    console.log("✅ Commands Loaded");
-});
-
-// Slash Commands
-client.on("interactionCreate", async interaction => {
-
-    if (interaction.isChatInputCommand()) {
-        return commands.run(interaction, client);
-    }
-
-    if (
-        interaction.isButton() ||
-        interaction.isModalSubmit() ||
-        interaction.isAnySelectMenu()
-    ) {
-        return interactions.run(interaction, client);
-    }
+]
 
 });
 
-// Login
-client.login(process.env.TOKEN);
+
+
+
+// ===============================
+// READY
+// ===============================
+
+client.once("ready", async()=>{
+
+
+console.log(
+`${client.user.tag} is online`
+);
+
+
+
+await commands.register(client);
+
+
+
+});
+
+
+
+
+// ===============================
+// COMMANDS
+// ===============================
+
+client.on(
+"interactionCreate",
+async interaction=>{
+
+
+try{
+
+
+if(
+interaction.isChatInputCommand()
+){
+
+
+await commands.run(
+interaction
+);
+
+
+}
+
+
+
+
+
+if(
+interaction.isButton()
+){
+
+
+await interactions.button(
+interaction
+);
+
+
+}
+
+
+
+
+
+if(
+interaction.isModalSubmit()
+){
+
+
+await interactions.modal(
+interaction
+);
+
+
+}
+
+
+
+}catch(error){
+
+
+console.log(error);
+
+
+
+if(!interaction.replied){
+
+
+await interaction.reply({
+
+content:
+"❌ Something went wrong.",
+
+ephemeral:true
+
+});
+
+
+}
+
+
+}
+
+
+
+});
+
+
+
+
+// ===============================
+// LOGIN
+// ===============================
+
+client.login(
+process.env.TOKEN
+);
