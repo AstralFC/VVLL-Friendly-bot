@@ -103,7 +103,7 @@ version:"10"
 })
 .setToken(process.env.TOKEN);
 
-
+console.log("COMMANDS:", commands.map(c => c.name));
 
 await rest.put(
 
