@@ -1,5 +1,5 @@
 // ===============================
-// VVLL BOT UPDATED INDEX.JS 1/2
+// VVLL BOT INDEX.JS PART 1/2
 // ===============================
 
 require("dotenv").config();
@@ -13,276 +13,334 @@ ButtonBuilder,
 ButtonStyle,
 SlashCommandBuilder,
 REST,
-ModalBuilder,
-TextInputBuilder,
-TextInputStyle,
 Routes
 } = require("discord.js");
 
 
 const client = new Client({
+
 intents:[
+
 GatewayIntentBits.Guilds,
 GatewayIntentBits.GuildMembers
+
 ]
+
 });
 
 
+// ===============================
 // IDS
+// ===============================
 
 const REF_ROLE_ID = "1521782877950447740";
 const FRIENDLY_ROLE_ID = "1531405293509017790";
 
 
+// ===============================
 // DATA
+// ===============================
 
-let friendlyPlayers = new Map();
+let friendlyPlayers = [];
 
 let friendlyMessage = null;
 
 
+
 let league = {
+
 teams:[],
 games:[],
 current:0
+
 };
 
 
 
+// ===============================
 // COMMANDS
+// ===============================
+
 
 const commands = [
 
+
 new SlashCommandBuilder()
+
 .setName("setup")
-.setDescription("Create friendly queue"),
+
+.setDescription("Start friendly queue"),
+
 
 
 new SlashCommandBuilder()
+
 .setName("create-game")
-.setDescription("Create game")
+
+.setDescription("Create a game")
 
 .addRoleOption(o=>
+
 o.setName("home")
+
 .setDescription("Home team")
-.setRequired(true))
+
+.setRequired(true)
+
+)
+
 
 .addRoleOption(o=>
+
 o.setName("away")
+
 .setDescription("Away team")
-.setRequired(true))
+
+.setRequired(true)
+
+)
+
 
 .addStringOption(o=>
+
 o.setName("time")
-.setDescription("Example 30m 2h")
-.setRequired(true))
+
+.setDescription("Example 2h")
+
+.setRequired(true)
+
+)
+
 
 .addStringOption(o=>
+
 o.setName("format")
-.setDescription("Format")
-.setRequired(true))
+
+.setDescription("4v4 - 11v11")
+
+.setRequired(true)
+
+)
+
 
 .addStringOption(o=>
+
 o.setName("stage")
-.setDescription("Stage")
-.setRequired(true)),
+
+.setDescription("League stage")
+
+.setRequired(true)
+
+),
+
 
 
 new SlashCommandBuilder()
+
 .setName("league-setup")
-.setDescription("Setup league")
+
+.setDescription("Create league")
 
 ];
 
 
 
+// ===============================
 // READY
+// ===============================
 
-client.once("ready",async()=>{
+
+client.once("ready", async()=>{
+
 
 console.log(
 `${client.user.tag} online`
 );
 
 
+
 const rest = new REST({
+
 version:"10"
-})
-.setToken(process.env.TOKEN);
+
+}).setToken(process.env.TOKEN);
+
 
 
 await rest.put(
 
 Routes.applicationCommands(
+
 client.user.id
+
 ),
 
 {
-body:commands.map(x=>x.toJSON())
+
+body: commands.map(c=>c.toJSON())
+
 }
 
 );
+
+
+
+console.log("Commands registered");
 
 
 });
 
 
 
+// ===============================
 // TIME
+// ===============================
 
-function convertTime(t){
 
-let num=parseInt(t);
+function getSeconds(time){
 
-if(t.endsWith("m"))
-return num*60;
 
-if(t.endsWith("h"))
-return num*3600;
+let number =
+parseInt(time);
 
-if(t.endsWith("d"))
-return num*86400;
+
+
+if(time.endsWith("m"))
+
+return number * 60;
+
+
+
+if(time.endsWith("h"))
+
+return number * 3600;
+
+
+
+if(time.endsWith("d"))
+
+return number * 86400;
+
 
 
 return null;
 
-}
-
-
-
-// UPDATE FRIENDLY EMBED
-
-async function updateFriendly(){
-
-
-if(!friendlyMessage) return;
-
-
-let players =
-[...friendlyPlayers.keys()]
-.map(id=>`<@${id}>`)
-.join("\n");
-
-
-if(!players)
-players="Nobody joined yet";
-
-
-let embed =
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("⚽ VVLL Friendly")
-
-.setDescription(
-
-`
-🟢 Ready Players:
-
-${players}
-
-
-⏰ Timer:
-2 Hours
-
-Need more players!
-`
-
-);
-
-
-
-await friendlyMessage.edit({
-
-embeds:[embed]
-
-});
-
 
 }
 
 
 
-// INTERACTIONS
-
-client.on("interactionCreate",async interaction=>{
-
-
-if(interaction.isChatInputCommand()){
+// ===============================
+// INTERACTIONS START
+// ===============================
 
 
-if(interaction.commandName==="setup"){
+client.on("interactionCreate", async interaction=>{
 
 
-let embed =
-new EmbedBuilder()
+if(!interaction.isChatInputCommand())
+
+return;
+
+
+
+// FRIENDLY SETUP
+
+
+if(interaction.commandName === "setup"){
+
+
+
+let embed = new EmbedBuilder()
 
 .setColor("#ff0055")
 
 .setTitle("⚽ VVLL Friendly Queue")
 
 .setDescription(
-"Nobody joined yet\n\n⏰ 2 Hour Timer"
+
+`
+🟢 Players:
+
+Nobody joined yet
+
+
+⏰ Timer:
+
+2 Hours
+
+`
+
 );
 
 
 
-let row =
-new ActionRowBuilder()
+let buttons = new ActionRowBuilder()
 
 .addComponents(
 
 new ButtonBuilder()
-.setCustomId("friendly_join")
+
+.setCustomId("join_friendly")
+
 .setLabel("Join")
+
 .setStyle(ButtonStyle.Success),
 
 
+
 new ButtonBuilder()
-.setCustomId("friendly_leave")
+
+.setCustomId("leave_friendly")
+
 .setLabel("Leave")
+
 .setStyle(ButtonStyle.Danger)
 
 );
 
 
 
-let msg =
-await interaction.reply({
+let msg = await interaction.reply({
 
 embeds:[embed],
 
-components:[row],
+components:[buttons],
 
 fetchReply:true
 
 });
 
 
-friendlyMessage=msg;
+
+friendlyMessage = msg;
+
 
 
 }
+// ===============================
+// VVLL BOT INDEX.JS PART 2/2
+// ===============================
 
 
 
 // CREATE GAME
 
-if(interaction.commandName==="create-game"){
+if(interaction.commandName === "create-game"){
 
 
 let seconds =
-convertTime(
+getSeconds(
 interaction.options.getString("time")
 );
+
 
 
 if(!seconds){
 
 return interaction.reply({
 
-content:"Use 30m, 2h, or 1d",
+content:"Use time like 30m, 2h, or 1d",
 
 ephemeral:true
 
@@ -292,13 +350,12 @@ ephemeral:true
 
 
 
-let stamp =
+let timestamp =
 Math.floor(Date.now()/1000)+seconds;
 
 
 
-let embed =
-new EmbedBuilder()
+let embed = new EmbedBuilder()
 
 .setColor("#ff0055")
 
@@ -312,12 +369,15 @@ new EmbedBuilder()
 🚌 ${interaction.options.getRole("away")}
 
 
-📋 ${interaction.options.getString("format")}
+📋 Format:
+${interaction.options.getString("format")}
 
-🏆 ${interaction.options.getString("stage")}
+
+🏆 Stage:
+${interaction.options.getString("stage")}
 
 
-⏰ <t:${stamp}:F>
+⏰ <t:${timestamp}:F>
 
 
 🧑‍⚖️ Ref Needed
@@ -328,8 +388,7 @@ new EmbedBuilder()
 
 
 
-let row =
-new ActionRowBuilder()
+let row = new ActionRowBuilder()
 
 .addComponents(
 
@@ -341,7 +400,7 @@ new ButtonBuilder()
 
 .setStyle(ButtonStyle.Primary)
 
-);
+)
 
 
 
@@ -355,20 +414,32 @@ components:[row]
 
 
 }
+
+
+
+});
+
+
+
 // ===============================
-// VVLL BOT UPDATED INDEX.JS 2/2
+// BUTTON HANDLER
 // ===============================
 
 
-// BUTTONS
-
-if(interaction.isButton()){
+client.on("interactionCreate", async interaction=>{
 
 
+if(!interaction.isButton())
 
-// FRIENDLY JOIN
+return;
 
-if(interaction.customId==="friendly_join"){
+
+
+// JOIN FRIENDLY
+
+
+if(interaction.customId === "join_friendly"){
+
 
 
 if(!interaction.member.roles.cache.has(FRIENDLY_ROLE_ID)){
@@ -376,7 +447,7 @@ if(!interaction.member.roles.cache.has(FRIENDLY_ROLE_ID)){
 
 return interaction.reply({
 
-content:"❌ You need the Friendly role to join.",
+content:"❌ You need the Friendly role.",
 
 ephemeral:true
 
@@ -387,54 +458,79 @@ ephemeral:true
 
 
 
-friendlyPlayers.set(
-
-interaction.user.id,
-
-Date.now()
-
-);
+if(!friendlyPlayers.includes(interaction.user.id)){
 
 
-
-await updateFriendly();
-
-
-
-return interaction.reply({
-
-content:"✅ Joined friendly queue!",
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-
-// FRIENDLY LEAVE
-
-if(interaction.customId==="friendly_leave"){
-
-
-friendlyPlayers.delete(
-
+friendlyPlayers.push(
 interaction.user.id
+);
+
+
+}
+
+
+
+let players = friendlyPlayers
+.map(id=>`<@${id}>`)
+.join("\n");
+
+
+
+let embed =
+EmbedBuilder.from(
+interaction.message.embeds[0]
+);
+
+
+
+embed.setDescription(
+
+`
+🟢 Players:
+
+${players}
+
+
+⏰ Timer:
+
+2 Hours
+
+`
 
 );
 
 
 
-await updateFriendly();
+return interaction.update({
+
+embeds:[embed]
+
+});
+
+
+}
+
+
+
+// LEAVE FRIENDLY
+
+
+if(interaction.customId === "leave_friendly"){
+
+
+
+friendlyPlayers =
+friendlyPlayers.filter(
+
+id=>id !== interaction.user.id
+
+);
 
 
 
 return interaction.reply({
 
-content:"❌ Left friendly queue.",
+content:"❌ Left queue",
 
 ephemeral:true
 
@@ -446,9 +542,10 @@ ephemeral:true
 
 
 
-// REF CLAIM
+// CLAIM REF
 
-if(interaction.customId==="claim_ref"){
+
+if(interaction.customId === "claim_ref"){
 
 
 
@@ -457,7 +554,7 @@ if(!interaction.member.roles.cache.has(REF_ROLE_ID)){
 
 return interaction.reply({
 
-content:"❌ You need the Referee role.",
+content:"❌ You need the Ref role.",
 
 ephemeral:true
 
@@ -475,19 +572,17 @@ interaction.message.embeds[0]
 
 
 
-let text =
-embed.data.description
-.replace(
+embed.setDescription(
+
+embed.data.description.replace(
 
 "🧑‍⚖️ Ref Needed",
 
 `🧑‍⚖️ Referee: ${interaction.user}`
 
+)
+
 );
-
-
-
-embed.setDescription(text);
 
 
 
@@ -504,187 +599,14 @@ components:[]
 
 
 
-// LEAGUE TIME
-
-if(interaction.customId==="league_time"){
-
-
-
-let modal =
-new ModalBuilder()
-
-.setCustomId("league_time_modal")
-
-.setTitle(
-`Game ${league.current+1}`
-);
-
-
-
-let input =
-new TextInputBuilder()
-
-.setCustomId("time")
-
-.setLabel("Enter date and time")
-
-.setPlaceholder(
-"July 30 6:00 PM"
-)
-
-.setStyle(TextInputStyle.Short);
-
-
-
-modal.addComponents(
-
-new ActionRowBuilder()
-
-.addComponents(input)
-
-);
-
-
-
-return interaction.showModal(modal);
-
-
-}
-
-
-
-}
-
-
-
-
-
-// MODALS
-
-if(interaction.isModalSubmit()){
-
-
-
-if(interaction.customId==="league_time_modal"){
-
-
-
-league.games[league.current].time =
-
-interaction.fields.getTextInputValue("time");
-
-
-
-league.current++;
-
-
-
-if(league.current < league.games.length){
-
-
-return interaction.reply({
-
-content:
-
-`✅ Saved!
-
-Next game:
-${league.games[league.current].home}
-VS
-${league.games[league.current].away}`,
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-let schedule="";
-
-
-
-league.games.forEach((g,i)=>{
-
-
-schedule +=
-
-`
-⚽ Game ${i+1}
-
-${g.home}
-VS
-${g.away}
-
-⏰ ${g.time}
-
-🧑‍⚖️ Ref Needed
-
-────────────
-`;
-
-
-
 });
 
 
 
-let embed =
-new EmbedBuilder()
 
-.setColor("#ff0055")
-
-.setTitle("🏆 VVLL Final Schedule")
-
-.setDescription(schedule);
-
-
-
-return interaction.reply({
-
-embeds:[embed]
-
-});
-
-
-}
-
-
-
-}
-
-
-
-
-
-// CLEAN FRIENDLY AFTER 2 HOURS
-
-setInterval(()=>{
-
-
-let now=Date.now();
-
-
-for(let [id,time] of friendlyPlayers){
-
-
-if(now-time >= 7200000){
-
-friendlyPlayers.delete(id);
-
-}
-
-
-}
-
-
-},60000);
-
-
-
-
+// ===============================
 // LOGIN
+// ===============================
+
 
 client.login(process.env.TOKEN);
