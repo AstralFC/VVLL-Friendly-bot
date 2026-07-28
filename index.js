@@ -1,6 +1,5 @@
 // ===============================
-// VVLL LEAGUE BOT - INDEX.JS
-// PART 1/2
+// VVLL BOT UPDATED INDEX.JS 1/2
 // ===============================
 
 require("dotenv").config();
@@ -13,14 +12,13 @@ ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
 SlashCommandBuilder,
-PermissionsBitField,
+REST,
 ModalBuilder,
 TextInputBuilder,
-TextInputStyle
+TextInputStyle,
+Routes
 } = require("discord.js");
 
-const { REST } = require("@discordjs/rest");
-const { Routes } = require("discord-api-types/v10");
 
 const client = new Client({
 intents:[
@@ -30,18 +28,18 @@ GatewayIntentBits.GuildMembers
 });
 
 
-// ===============================
-// SETTINGS
-// ===============================
+// IDS
 
 const REF_ROLE_ID = "1521782877950447740";
+const FRIENDLY_ROLE_ID = "1531405293509017790";
 
 
-// ===============================
 // DATA
-// ===============================
 
 let friendlyPlayers = new Map();
+
+let friendlyMessage = null;
+
 
 let league = {
 teams:[],
@@ -50,9 +48,8 @@ current:0
 };
 
 
-// ===============================
+
 // COMMANDS
-// ===============================
 
 const commands = [
 
@@ -61,82 +58,57 @@ new SlashCommandBuilder()
 .setDescription("Create friendly queue"),
 
 
-
 new SlashCommandBuilder()
 .setName("create-game")
-.setDescription("Create a VVLL game")
+.setDescription("Create game")
 
-.addRoleOption(o =>
+.addRoleOption(o=>
 o.setName("home")
 .setDescription("Home team")
 .setRequired(true))
 
-.addRoleOption(o =>
+.addRoleOption(o=>
 o.setName("away")
 .setDescription("Away team")
 .setRequired(true))
 
-.addStringOption(o =>
+.addStringOption(o=>
 o.setName("time")
-.setDescription("Example: 30m, 2h, 1d")
+.setDescription("Example 30m 2h")
 .setRequired(true))
 
-.addStringOption(o =>
+.addStringOption(o=>
 o.setName("format")
-.setDescription("Match format")
-.setRequired(true)
-.addChoices(
-{name:"4v4",value:"4v4"},
-{name:"5v5",value:"5v5"},
-{name:"6v6",value:"6v6"},
-{name:"7v7",value:"7v7"},
-{name:"8v8",value:"8v8"},
-{name:"9v9",value:"9v9"},
-{name:"10v10",value:"10v10"},
-{name:"11v11",value:"11v11"}
-))
+.setDescription("Format")
+.setRequired(true))
 
-.addStringOption(o =>
+.addStringOption(o=>
 o.setName("stage")
-.setDescription("Tournament stage")
-.setRequired(true)
-.addChoices(
-{name:"League",value:"League"},
-{name:"Last 8",value:"Last 8"},
-{name:"Last 4",value:"Last 4"},
-{name:"Finals",value:"Finals"}
-)),
-
+.setDescription("Stage")
+.setRequired(true)),
 
 
 new SlashCommandBuilder()
 .setName("league-setup")
 .setDescription("Setup league")
 
-.addRoleOption(o=>o.setName("team1").setDescription("Team 1").setRequired(true))
-.addRoleOption(o=>o.setName("team2").setDescription("Team 2").setRequired(true))
-.addRoleOption(o=>o.setName("team3").setDescription("Team 3").setRequired(true))
-.addRoleOption(o=>o.setName("team4").setDescription("Team 4").setRequired(true))
-.addRoleOption(o=>o.setName("team5").setDescription("Team 5").setRequired(true))
-.addRoleOption(o=>o.setName("team6").setDescription("Team 6").setRequired(true))
-.addRoleOption(o=>o.setName("team7").setDescription("Team 7").setRequired(true))
-.addRoleOption(o=>o.setName("team8").setDescription("Team 8").setRequired(true))
-
 ];
 
 
 
-// ===============================
 // READY
-// ===============================
 
 client.once("ready",async()=>{
 
-console.log(`${client.user.tag} online`);
+console.log(
+`${client.user.tag} online`
+);
+
 
 const rest = new REST({
 version:"10"
-}).setToken(process.env.TOKEN);
+})
+.setToken(process.env.TOKEN);
 
 
 await rest.put(
@@ -146,34 +118,31 @@ client.user.id
 ),
 
 {
-body:commands.map(c=>c.toJSON())
+body:commands.map(x=>x.toJSON())
 }
 
 );
 
 
-console.log("Commands loaded");
-
 });
 
 
 
-// ===============================
-// TIME CONVERTER
-// ===============================
+// TIME
 
 function convertTime(t){
 
-let amount=parseInt(t);
+let num=parseInt(t);
 
 if(t.endsWith("m"))
-return amount*60;
+return num*60;
 
 if(t.endsWith("h"))
-return amount*3600;
+return num*3600;
 
 if(t.endsWith("d"))
-return amount*86400;
+return num*86400;
+
 
 return null;
 
@@ -181,17 +150,67 @@ return null;
 
 
 
-// ===============================
+// UPDATE FRIENDLY EMBED
+
+async function updateFriendly(){
+
+
+if(!friendlyMessage) return;
+
+
+let players =
+[...friendlyPlayers.keys()]
+.map(id=>`<@${id}>`)
+.join("\n");
+
+
+if(!players)
+players="Nobody joined yet";
+
+
+let embed =
+new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle("⚽ VVLL Friendly")
+
+.setDescription(
+
+`
+🟢 Ready Players:
+
+${players}
+
+
+⏰ Timer:
+2 Hours
+
+Need more players!
+`
+
+);
+
+
+
+await friendlyMessage.edit({
+
+embeds:[embed]
+
+});
+
+
+}
+
+
+
 // INTERACTIONS
-// ===============================
 
 client.on("interactionCreate",async interaction=>{
 
 
 if(interaction.isChatInputCommand()){
 
-
-// FRIENDLY SETUP
 
 if(interaction.commandName==="setup"){
 
@@ -204,35 +223,44 @@ new EmbedBuilder()
 .setTitle("⚽ VVLL Friendly Queue")
 
 .setDescription(
-"Nobody joined yet\n\n⏰ Timer: 2 Hours"
+"Nobody joined yet\n\n⏰ 2 Hour Timer"
 );
 
 
-let buttons =
+
+let row =
 new ActionRowBuilder()
 
 .addComponents(
 
 new ButtonBuilder()
-.setCustomId("join_friendly")
+.setCustomId("friendly_join")
 .setLabel("Join")
 .setStyle(ButtonStyle.Success),
 
+
 new ButtonBuilder()
-.setCustomId("leave_friendly")
+.setCustomId("friendly_leave")
 .setLabel("Leave")
 .setStyle(ButtonStyle.Danger)
 
 );
 
 
-return interaction.reply({
+
+let msg =
+await interaction.reply({
 
 embeds:[embed],
 
-components:[buttons]
+components:[row],
+
+fetchReply:true
 
 });
+
+
+friendlyMessage=msg;
 
 
 }
@@ -263,8 +291,10 @@ ephemeral:true
 }
 
 
-let timestamp =
+
+let stamp =
 Math.floor(Date.now()/1000)+seconds;
+
 
 
 let embed =
@@ -272,7 +302,7 @@ new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("⚽ VVLL Match")
+.setTitle("⚽ VVLL Game")
 
 .setDescription(
 
@@ -282,215 +312,55 @@ new EmbedBuilder()
 🚌 ${interaction.options.getRole("away")}
 
 
-📋 Format:
-${interaction.options.getString("format")}
+📋 ${interaction.options.getString("format")}
+
+🏆 ${interaction.options.getString("stage")}
 
 
-🏆 Stage:
-${interaction.options.getString("stage")}
-
-
-⏰ <t:${timestamp}:F>
+⏰ <t:${stamp}:F>
 
 
 🧑‍⚖️ Ref Needed
+
 `
 
 );
+
+
+
+let row =
+new ActionRowBuilder()
+
+.addComponents(
+
+new ButtonBuilder()
+
+.setCustomId("claim_ref")
+
+.setLabel("🧑‍⚖️ Claim Ref")
+
+.setStyle(ButtonStyle.Primary)
+
+);
+
 
 
 return interaction.reply({
 
 embeds:[embed],
 
-components:[
-
-new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("claim_ref")
-.setLabel("🧑‍⚖️ Claim Ref")
-.setStyle(ButtonStyle.Primary)
-
-)
-
-]
+components:[row]
 
 });
 
 
 }
 // ===============================
-// VVLL LEAGUE BOT - INDEX.JS
-// PART 2/2
+// VVLL BOT UPDATED INDEX.JS 2/2
 // ===============================
 
 
-// LEAGUE SETUP
-
-if(interaction.commandName==="league-setup"){
-
-
-league.teams=[];
-
-
-for(let i=1;i<=8;i++){
-
-league.teams.push(
-
-interaction.options.getRole(`team${i}`)
-
-);
-
-}
-
-
-// Randomize
-
-league.teams.sort(
-()=>Math.random()-0.5
-);
-
-
-
-league.games=[];
-
-
-for(let i=0;i<8;i+=2){
-
-league.games.push({
-
-home:league.teams[i],
-
-away:league.teams[i+1],
-
-time:null
-
-});
-
-}
-
-
-league.current=0;
-
-
-
-let embed =
-
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("🏆 VVLL League Setup")
-
-.setDescription(
-
-`
-✅ Teams Selected
-
-${league.teams.map((t,i)=>
-`${i+1}. ${t}`
-).join("\n")}
-
-
-Creating matchups...
-`
-
-);
-
-
-
-await interaction.reply({
-
-embeds:[embed]
-
-});
-
-
-
-setTimeout(async()=>{
-
-
-let games =
-
-league.games.map((g,i)=>
-
-`
-⚽ **Game ${i+1}**
-
-${g.home}
-VS
-${g.away}
-`
-
-).join("\n");
-
-
-
-let matchEmbed =
-
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("⚽ VVLL Matchups")
-
-.setDescription(
-
-`
-${games}
-
-Press button to add times.
-`
-
-);
-
-
-
-let button =
-
-new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-
-.setCustomId("league_add_time")
-
-.setLabel("⏰ Add Times")
-
-.setStyle(ButtonStyle.Primary)
-
-);
-
-
-
-interaction.channel.send({
-
-embeds:[matchEmbed],
-
-components:[button]
-
-});
-
-
-},2000);
-
-
-}
-
-
-
-}
-
-
-
-// ===============================
 // BUTTONS
-// ===============================
-
 
 if(interaction.isButton()){
 
@@ -498,7 +368,23 @@ if(interaction.isButton()){
 
 // FRIENDLY JOIN
 
-if(interaction.customId==="join_friendly"){
+if(interaction.customId==="friendly_join"){
+
+
+if(!interaction.member.roles.cache.has(FRIENDLY_ROLE_ID)){
+
+
+return interaction.reply({
+
+content:"❌ You need the Friendly role to join.",
+
+ephemeral:true
+
+});
+
+
+}
+
 
 
 friendlyPlayers.set(
@@ -510,9 +396,14 @@ Date.now()
 );
 
 
+
+await updateFriendly();
+
+
+
 return interaction.reply({
 
-content:"✅ Joined friendly queue",
+content:"✅ Joined friendly queue!",
 
 ephemeral:true
 
@@ -523,9 +414,10 @@ ephemeral:true
 
 
 
+
 // FRIENDLY LEAVE
 
-if(interaction.customId==="leave_friendly"){
+if(interaction.customId==="friendly_leave"){
 
 
 friendlyPlayers.delete(
@@ -535,9 +427,14 @@ interaction.user.id
 );
 
 
+
+await updateFriendly();
+
+
+
 return interaction.reply({
 
-content:"❌ Left friendly queue",
+content:"❌ Left friendly queue.",
 
 ephemeral:true
 
@@ -545,6 +442,7 @@ ephemeral:true
 
 
 }
+
 
 
 
@@ -553,12 +451,13 @@ ephemeral:true
 if(interaction.customId==="claim_ref"){
 
 
+
 if(!interaction.member.roles.cache.has(REF_ROLE_ID)){
 
 
 return interaction.reply({
 
-content:"❌ You need the referee role",
+content:"❌ You need the Referee role.",
 
 ephemeral:true
 
@@ -568,9 +467,35 @@ ephemeral:true
 }
 
 
-return interaction.reply({
 
-content:`🧑‍⚖️ Ref claimed by ${interaction.user}`
+let embed =
+EmbedBuilder.from(
+interaction.message.embeds[0]
+);
+
+
+
+let text =
+embed.data.description
+.replace(
+
+"🧑‍⚖️ Ref Needed",
+
+`🧑‍⚖️ Referee: ${interaction.user}`
+
+);
+
+
+
+embed.setDescription(text);
+
+
+
+return interaction.update({
+
+embeds:[embed],
+
+components:[]
 
 });
 
@@ -579,36 +504,32 @@ content:`🧑‍⚖️ Ref claimed by ${interaction.user}`
 
 
 
-// LEAGUE TIME BUTTON
+// LEAGUE TIME
 
-if(interaction.customId==="league_add_time"){
+if(interaction.customId==="league_time"){
 
 
 
 let modal =
-
 new ModalBuilder()
 
 .setCustomId("league_time_modal")
 
 .setTitle(
-
-`Game ${league.current+1} Time`
-
+`Game ${league.current+1}`
 );
 
 
 
 let input =
-
 new TextInputBuilder()
 
 .setCustomId("time")
 
-.setLabel("Enter date/time")
+.setLabel("Enter date and time")
 
 .setPlaceholder(
-"Example: July 30 6:00 PM"
+"July 30 6:00 PM"
 )
 
 .setStyle(TextInputStyle.Short);
@@ -636,10 +557,9 @@ return interaction.showModal(modal);
 
 
 
-// ===============================
-// MODALS
-// ===============================
 
+
+// MODALS
 
 if(interaction.isModalSubmit()){
 
@@ -649,15 +569,9 @@ if(interaction.customId==="league_time_modal"){
 
 
 
-let game =
-league.games[league.current];
+league.games[league.current].time =
 
-
-game.time =
-
-interaction.fields.getTextInputValue(
-"time"
-);
+interaction.fields.getTextInputValue("time");
 
 
 
@@ -677,9 +591,7 @@ content:
 Next game:
 ${league.games[league.current].home}
 VS
-${league.games[league.current].away}
-
-Press Add Times again.`,
+${league.games[league.current].away}`,
 
 ephemeral:true
 
@@ -688,9 +600,6 @@ ephemeral:true
 
 }
 
-
-
-// FINAL SCHEDULE
 
 
 let schedule="";
@@ -703,13 +612,13 @@ league.games.forEach((g,i)=>{
 schedule +=
 
 `
-⚽ **Game ${i+1}**
+⚽ Game ${i+1}
 
-🏠 ${g.home}
+${g.home}
+VS
+${g.away}
 
-🚌 ${g.away}
-
-📅 ${g.time}
+⏰ ${g.time}
 
 🧑‍⚖️ Ref Needed
 
@@ -722,8 +631,7 @@ schedule +=
 
 
 
-let finalEmbed =
-
+let embed =
 new EmbedBuilder()
 
 .setColor("#ff0055")
@@ -736,7 +644,7 @@ new EmbedBuilder()
 
 return interaction.reply({
 
-embeds:[finalEmbed]
+embeds:[embed]
 
 });
 
@@ -744,14 +652,14 @@ embeds:[finalEmbed]
 }
 
 
+
 }
 
 
-});
 
 
 
-// REMOVE FRIENDLY AFTER 2 HOURS
+// CLEAN FRIENDLY AFTER 2 HOURS
 
 setInterval(()=>{
 
@@ -773,6 +681,7 @@ friendlyPlayers.delete(id);
 
 
 },60000);
+
 
 
 
