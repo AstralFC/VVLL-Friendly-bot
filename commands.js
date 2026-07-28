@@ -20,78 +20,31 @@ const database = require("./database");
 
 const commands = [
 
-
 new SlashCommandBuilder()
 .setName("setup")
 .setDescription("Create VVLL friendly queue"),
 
 
-
 new SlashCommandBuilder()
 .setName("create-game")
 .setDescription("Create a VVLL match")
-
-.addRoleOption(option =>
-option
-.setName("home")
+.addRoleOption(o =>
+o.setName("home")
 .setDescription("Home team")
-.setRequired(true)
-)
-
-.addRoleOption(option =>
-option
-.setName("away")
+.setRequired(true))
+.addRoleOption(o =>
+o.setName("away")
 .setDescription("Away team")
-.setRequired(true)
-)
-
-.addStringOption(option =>
-option
-.setName("time")
-.setDescription("Discord timestamp like <t:1234567890:F>")
-.setRequired(true)
-)
-
-.addStringOption(option =>
-option
-.setName("format")
-.setDescription("Match format")
-.setRequired(true)
-
-.addChoices(
-{name:"4v4",value:"4v4"},
-{name:"5v5",value:"5v5"},
-{name:"6v6",value:"6v6"},
-{name:"7v7",value:"7v7"},
-{name:"8v8",value:"8v8"},
-{name:"9v9",value:"9v9"},
-{name:"10v10",value:"10v10"},
-{name:"11v11",value:"11v11"}
-)
-
-)
-
-.addStringOption(option =>
-option
-.setName("stage")
-.setDescription("Tournament stage")
-.setRequired(true)
-
-.addChoices(
-{name:"League",value:"League"},
-{name:"Last 8",value:"Last 8"},
-{name:"Last 4",value:"Last 4"},
-{name:"Final",value:"Final"}
-)
-
-),
-
+.setRequired(true))
+.addStringOption(o =>
+o.setName("time")
+.setDescription("Discord timestamp")
+.setRequired(true)),
 
 
 new SlashCommandBuilder()
 .setName("league-setup")
-.setDescription("Create VVLL league")
-
+.setDescription("Setup VVLL league")
 .addRoleOption(o=>o.setName("team1").setDescription("Team 1").setRequired(true))
 .addRoleOption(o=>o.setName("team2").setDescription("Team 2").setRequired(true))
 .addRoleOption(o=>o.setName("team3").setDescription("Team 3").setRequired(true))
@@ -102,37 +55,27 @@ new SlashCommandBuilder()
 .addRoleOption(o=>o.setName("team8").setDescription("Team 8").setRequired(true)),
 
 
-
 new SlashCommandBuilder()
 .setName("sign")
-.setDescription("Send player contract")
-
-.addUserOption(o=>
-o
-.setName("player")
-.setDescription("Player to sign")
-.setRequired(true)
-)
-
-.addRoleOption(o=>
-o
-.setName("team")
-.setDescription("Team role")
-.setRequired(true)
-),
-
+.setDescription("Sign a player")
+.addUserOption(o =>
+o.setName("player")
+.setDescription("Player")
+.setRequired(true))
+.addRoleOption(o =>
+o.setName("team")
+.setDescription("Team")
+.setRequired(true)),
 
 
 new SlashCommandBuilder()
 .setName("result")
-.setDescription("Submit game result"),
-
+.setDescription("Submit match result"),
 
 
 new SlashCommandBuilder()
 .setName("standings")
 .setDescription("View standings"),
-
 
 
 new SlashCommandBuilder()
