@@ -4,233 +4,159 @@
 // =====================================
 
 const {
-SlashCommandBuilder,
-EmbedBuilder
+    SlashCommandBuilder,
+    EmbedBuilder
 } = require("discord.js");
 
 const database = require("./database");
 
 
-// =====================================
-// OWNER SETTINGS
-// =====================================
+// OWNER
 
 const OWNER_ID = "1505021865985572940";
 
 const OWNER_COMMANDS = [
-
-"team-create",
-"team-delete",
-"owner-panel",
-"league-setup"
-
+    "team-create",
+    "team-delete",
+    "owner-panel",
+    "league-setup"
 ];
 
 
 
 
-// =====================================
 // COMMAND LIST
-// =====================================
 
 const commands = [
 
 
-// FRIENDLY QUEUE
-
 new SlashCommandBuilder()
-
 .setName("queue")
-
-.setDescription(
-"Open VVLL friendly queue"
-),
+.setDescription("Open VVLL friendly queue"),
 
 
-
-// CREATE TEAM
 
 new SlashCommandBuilder()
-
 .setName("team-create")
-
-.setDescription(
-"Create a VVLL team"
+.setDescription("Create a VVLL team")
+.addStringOption(option =>
+    option
+    .setName("name")
+    .setDescription("Team name")
+    .setRequired(true)
 )
-
-.addStringOption(o=>
-o.setName("name")
-.setDescription("Team name")
-.setRequired(true)
+.addRoleOption(option =>
+    option
+    .setName("role")
+    .setDescription("Team role")
+    .setRequired(true)
 )
-
-.addRoleOption(o=>
-o.setName("role")
-.setDescription("Team role")
-.setRequired(true)
-)
-
-.addUserOption(o=>
-o.setName("manager")
-.setDescription("Team manager")
-.setRequired(true)
+.addUserOption(option =>
+    option
+    .setName("manager")
+    .setDescription("Team manager")
+    .setRequired(true)
 ),
 
 
 
-
-// TEAM INFO
-
 new SlashCommandBuilder()
-
 .setName("team-info")
-
-.setDescription(
-"View team information"
-)
-
-.addRoleOption(o=>
-o.setName("team")
-.setDescription("Team role")
-.setRequired(true)
+.setDescription("View team information")
+.addRoleOption(option =>
+    option
+    .setName("team")
+    .setDescription("Team role")
+    .setRequired(true)
 ),
 
 
 
-
-// CREATE MATCH
-
 new SlashCommandBuilder()
-
 .setName("match-create")
-
-.setDescription(
-"Create a VVLL match"
+.setDescription("Create match")
+.addRoleOption(option =>
+    option
+    .setName("home")
+    .setDescription("Home team")
+    .setRequired(true)
 )
-
-.addRoleOption(o=>
-o.setName("home")
-.setDescription("Home team")
-.setRequired(true)
+.addRoleOption(option =>
+    option
+    .setName("away")
+    .setDescription("Away team")
+    .setRequired(true)
 )
-
-.addRoleOption(o=>
-o.setName("away")
-.setDescription("Away team")
-.setRequired(true)
-)
-
-.addStringOption(o=>
-o.setName("time")
-.setDescription("Match timestamp")
-.setRequired(true)
+.addStringOption(option =>
+    option
+    .setName("time")
+    .setDescription("Timestamp")
+    .setRequired(true)
 ),
 
 
 
-
-// RESULT
-
 new SlashCommandBuilder()
-
 .setName("result")
-
-.setDescription(
-"Submit match result"
-)
-
-.addStringOption(o=>
-o.setName("score")
-.setDescription("Example 4-2")
-.setRequired(true)
+.setDescription("Submit result")
+.addStringOption(option =>
+    option
+    .setName("score")
+    .setDescription("Example 5-2")
+    .setRequired(true)
 ),
 
 
 
-
-// PLAYER STATS
-
 new SlashCommandBuilder()
-
 .setName("stats")
-
-.setDescription(
-"View player stats"
-)
-
-.addUserOption(o=>
-o.setName("player")
-.setDescription("Player")
-.setRequired(true)
+.setDescription("View player stats")
+.addUserOption(option =>
+    option
+    .setName("player")
+    .setDescription("Player")
+    .setRequired(true)
 ),
 
 
 
-
-// STANDINGS
-
 new SlashCommandBuilder()
-
 .setName("standings")
-
-.setDescription(
-"View league standings"
-),
+.setDescription("View standings"),
 
 
-
-
-// CONTRACT
 
 new SlashCommandBuilder()
-
 .setName("sign")
-
-.setDescription(
-"Send player contract"
-)
-
-.addUserOption(o=>
-o.setName("player")
-.setDescription("Player")
-.setRequired(true)
-)
-
-.addRoleOption(o=>
-o.setName("team")
-.setDescription("Team")
-.setRequired(true)
+.setDescription("Sign a player")
+.addUserOption(option =>
+    option
+    .setName("player")
+    .setDescription("Player to sign")
+    .setRequired(true)
 ),
 
 
 
-// OWNER PANEL
-
 new SlashCommandBuilder()
-
 .setName("owner-panel")
-
-.setDescription(
-"Open VVLL owner panel"
-)
+.setDescription("Open owner panel")
 
 
 ];
 
 
 
-// =====================================
+
 // ADD 2/3 BELOW THIS LINE
-// =====================================
 // =====================================
 // VVLL LEAGUE BOT
 // COMMANDS.JS 2/3
 // =====================================
 
 
-// =====================================
+
 // REGISTER COMMANDS
-// =====================================
 
 async function register(client){
 
@@ -246,8 +172,7 @@ Routes
 
 
 
-const rest =
-new REST({
+const rest = new REST({
 
 version:"10"
 
@@ -262,7 +187,7 @@ Routes.applicationGuildCommands(
 
 client.user.id,
 
-"1521671990505632940"
+"1521671990505635965"
 
 ),
 
@@ -270,7 +195,7 @@ client.user.id,
 
 body:
 commands.map(
-c=>c.toJSON()
+cmd=>cmd.toJSON()
 )
 
 }
@@ -278,9 +203,8 @@ c=>c.toJSON()
 );
 
 
-
 console.log(
-"✅ VVLL Commands Registered"
+"✅ VVLL commands loaded"
 );
 
 
@@ -290,11 +214,16 @@ console.log(
 
 
 
-// =====================================
 // COMMAND HANDLER
-// =====================================
 
 async function run(interaction){
+
+
+
+// PREVENT TIMEOUTS
+
+await interaction.deferReply();
+
 
 
 
@@ -313,12 +242,10 @@ interaction.user.id !== OWNER_ID
 ){
 
 
-return interaction.reply({
+return interaction.editReply({
 
 content:
-"❌ This command is owner only.",
-
-ephemeral:true
+"❌ This command is owner only."
 
 });
 
@@ -328,15 +255,11 @@ ephemeral:true
 
 
 
-
-// =====================================
 // QUEUE
-// =====================================
 
 if(
 interaction.commandName==="queue"
 ){
-
 
 
 let embed =
@@ -350,22 +273,21 @@ new EmbedBuilder()
 
 .setDescription(`
 
-Players:
-
-Nobody joined yet.
+🎮 Players:
+Nobody joined yet
 
 
 ⏰ Expires:
 1 Hour
 
 
-Everyone can join.
+Anyone can join.
 
 `);
 
 
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds:[embed]
 
@@ -378,14 +300,11 @@ embeds:[embed]
 
 
 
-// =====================================
 // TEAM CREATE
-// =====================================
 
 if(
 interaction.commandName==="team-create"
 ){
-
 
 
 let name =
@@ -411,13 +330,13 @@ manager:manager.id,
 
 players:[],
 
-points:0,
-
 wins:0,
 
 losses:0,
 
 draws:0,
+
+points:0,
 
 goals:0
 
@@ -458,22 +377,18 @@ Status:
 
 
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds:[embed]
 
 });
-
 
 }
 
 
 
 
-
-// =====================================
 // TEAM INFO
-// =====================================
 
 if(
 interaction.commandName==="team-info"
@@ -484,27 +399,25 @@ let role =
 interaction.options.getRole("team");
 
 
+
 let team =
 database.db.teams.find(
-
 t=>t.role===role.id
-
 );
 
 
 
 if(!team){
 
-return interaction.reply({
+return interaction.editReply({
 
 content:
-"❌ Team not found.",
-
-ephemeral:true
+"❌ Team not found."
 
 });
 
 }
+
 
 
 
@@ -532,11 +445,11 @@ team.players.map(
 p=>`<@${p}>`
 ).join("\n")
 :
-"None"
+"No players"
 }
 
 
-📊 Record:
+📊 Record
 
 🟢 Wins:
 ${team.wins}
@@ -548,14 +461,14 @@ ${team.draws}
 ${team.losses}
 
 
-⚽ Goals:
-${team.goals}
+🏆 Points:
+${team.points}
 
 `);
 
 
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds:[embed]
 
@@ -565,28 +478,29 @@ embeds:[embed]
 
 
 
-// =====================================
+
 // ADD 3/3 BELOW THIS LINE
-// =====================================
 // =====================================
 // VVLL LEAGUE BOT
 // COMMANDS.JS 3/3
 // =====================================
 
 
-// =====================================
+
 // MATCH CREATE
-// =====================================
 
 if(
 interaction.commandName==="match-create"
 ){
 
+
 let home =
 interaction.options.getRole("home");
 
+
 let away =
 interaction.options.getRole("away");
+
 
 let time =
 interaction.options.getString("time");
@@ -595,13 +509,13 @@ interaction.options.getString("time");
 
 database.db.matches.push({
 
-home: home.id,
+home:home.id,
 
-away: away.id,
+away:away.id,
 
-time: time,
+time:time,
 
-status:"Scheduled"
+status:"scheduled"
 
 });
 
@@ -615,7 +529,9 @@ new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("⚽ VVLL MATCH")
+.setTitle(
+"⚽ VVLL MATCH"
+)
 
 .setDescription(`
 
@@ -638,7 +554,7 @@ Status:
 
 
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds:[embed]
 
@@ -649,9 +565,8 @@ embeds:[embed]
 
 
 
-// =====================================
+
 // RESULT
-// =====================================
 
 if(
 interaction.commandName==="result"
@@ -667,7 +582,9 @@ new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("🏆 Match Result")
+.setTitle(
+"🏆 Match Result"
+)
 
 .setDescription(`
 
@@ -676,7 +593,7 @@ Final Score:
 ⚽ ${score}
 
 
-Player stats:
+Player stats needed:
 
 ⚽ Goals
 
@@ -688,7 +605,7 @@ Player stats:
 
 
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds:[embed]
 
@@ -699,9 +616,8 @@ embeds:[embed]
 
 
 
-// =====================================
+
 // STATS
-// =====================================
 
 if(
 interaction.commandName==="stats"
@@ -711,23 +627,20 @@ let user =
 interaction.options.getUser("player");
 
 
+
 let player =
 database.db.players.find(
-
 p=>p.id===user.id
-
 );
 
 
 
 if(!player){
 
-return interaction.reply({
+return interaction.editReply({
 
 content:
-"❌ Player has no stats yet.",
-
-ephemeral:true
+"❌ Player has no stats."
 
 });
 
@@ -740,7 +653,9 @@ new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("📊 VVLL PLAYER STATS")
+.setTitle(
+"📊 VVLL PLAYER STATS"
+)
 
 .setDescription(`
 
@@ -766,7 +681,7 @@ ${player.matches || 0}
 
 
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds:[embed]
 
@@ -777,9 +692,8 @@ embeds:[embed]
 
 
 
-// =====================================
+
 // STANDINGS
-// =====================================
 
 if(
 interaction.commandName==="standings"
@@ -787,6 +701,7 @@ interaction.commandName==="standings"
 
 let teams =
 database.db.teams;
+
 
 
 let table =
@@ -799,29 +714,34 @@ b.points-a.points
 
 **${index+1}. ${team.name}**
 
-🏆 Points: ${team.points || 0}
+🏆 Points:
+${team.points || 0}
 
-⚽ Goals: ${team.goals || 0}
+⚽ Goals:
+${team.goals || 0}
 
 `)
 .join("\n");
 
 
 
-let embed =
+return interaction.editReply({
+
+embeds:[
+
 new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("🏆 VVLL STANDINGS")
+.setTitle(
+"🏆 VVLL STANDINGS"
+)
 
-.setDescription(table || "No teams");
+.setDescription(
+table || "No teams yet"
+)
 
-
-
-return interaction.reply({
-
-embeds:[embed]
+]
 
 });
 
@@ -830,55 +750,8 @@ embeds:[embed]
 
 
 
-// =====================================
-// OWNER PANEL
-// =====================================
 
-if(
-interaction.commandName==="owner-panel"
-){
-
-let embed =
-new EmbedBuilder()
-
-.setColor("#ff0055")
-
-.setTitle("👑 VVLL OWNER PANEL")
-
-.setDescription(`
-
-Manage:
-
-🏆 Teams
-
-👥 Managers
-
-📄 Contracts
-
-⚽ Matches
-
-📊 Stats
-
-`);
-
-
-
-return interaction.reply({
-
-embeds:[embed],
-
-ephemeral:true
-
-});
-
-}
-
-
-
-
-// =====================================
-// SIGN CONTRACT
-// =====================================
+// SIGN PLAYER
 
 if(
 interaction.commandName==="sign"
@@ -888,8 +761,28 @@ let player =
 interaction.options.getUser("player");
 
 
+
+// FIND MANAGER TEAM
+
 let team =
-interaction.options.getRole("team");
+database.db.teams.find(
+
+t=>t.manager===interaction.user.id
+
+);
+
+
+
+if(!team){
+
+return interaction.editReply({
+
+content:
+"❌ You are not a team manager."
+
+});
+
+}
 
 
 
@@ -898,48 +791,97 @@ new EmbedBuilder()
 
 .setColor("#ff0055")
 
-.setTitle("📄 VVLL CONTRACT OFFER")
+.setTitle(
+"📄 VVLL CONTRACT OFFER"
+)
 
 .setDescription(`
 
-⚽ Contract Offer
+⚽ Signing Offer
 
 
 🏆 Team:
-${team}
+${team.name}
 
 
-👤 Player:
-${player}
+👔 Manager:
+<@${interaction.user.id}>
 
 
-Press accept or decline.
+Accept or decline in DM.
 
 `);
 
 
 
-database.db.contracts.push({
+try{
 
-player:player.id,
 
-team:team.id,
+await player.send({
 
-manager:interaction.user.id
+embeds:[embed]
 
 });
 
 
-database.save();
+}catch{
 
 
-
-return interaction.reply({
+return interaction.editReply({
 
 content:
-`✅ Contract sent to ${player}`,
+"❌ I cannot DM this player."
 
-ephemeral:true
+});
+
+}
+
+
+
+return interaction.editReply({
+
+content:
+`✅ Contract sent to ${player}`
+
+});
+
+}
+
+
+
+
+
+// OWNER PANEL
+
+if(
+interaction.commandName==="owner-panel"
+){
+
+return interaction.editReply({
+
+embeds:[
+
+new EmbedBuilder()
+
+.setColor("#ff0055")
+
+.setTitle(
+"👑 VVLL OWNER PANEL"
+)
+
+.setDescription(`
+
+🏆 Manage Teams
+
+📄 Contracts
+
+⚽ Matches
+
+📊 Stats
+
+`)
+
+]
 
 });
 
@@ -951,11 +893,9 @@ ephemeral:true
 
 
 
-// =====================================
 // EXPORTS
-// =====================================
 
-module.exports = {
+module.exports={
 
 commands,
 
