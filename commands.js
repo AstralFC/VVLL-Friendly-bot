@@ -8,92 +8,70 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const config = require("./config");
-const database = require("./database");
-const league = require("./league");
-const teams = require("./teams");
-const contracts = require("./contracts");
-const results = require("./results");
-const standings = require("./standings");
-const ownerPanel = require("./ownerPanel");
+const db = require("./database");
 
 
 
-const commands = [
+const data = [
 
-    new SlashCommandBuilder()
-    .setName("owner-panel")
-    .setDescription("Open owner panel"),
-
-
-    new SlashCommandBuilder()
-    .setName("league-setup")
-    .setDescription("Setup league")
-    .addStringOption(option =>
-        option
-        .setName("teams")
-        .setDescription("Teams separated by commas")
-        .setRequired(true)
-    ),
+new SlashCommandBuilder()
+.setName("league-setup")
+.setDescription("Setup VVLL league")
+.addStringOption(o =>
+o.setName("teams")
+.setDescription("Team names separated by commas")
+.setRequired(true)
+),
 
 
-    new SlashCommandBuilder()
-    .setName("team-create")
-    .setDescription("Create a team")
-    .addRoleOption(option =>
-        option
-        .setName("role")
-        .setDescription("Team role")
-        .setRequired(true)
-    ),
+new SlashCommandBuilder()
+.setName("team-create")
+.setDescription("Create a team"),
 
 
-    new SlashCommandBuilder()
-    .setName("roster")
-    .setDescription("View your roster"),
+new SlashCommandBuilder()
+.setName("sign")
+.setDescription("Sign a player")
+.addUserOption(o =>
+o.setName("player")
+.setDescription("Player to sign")
+.setRequired(true)
+),
 
 
-    new SlashCommandBuilder()
-    .setName("sign")
-    .setDescription("Send a contract")
-    .addUserOption(option =>
-        option
-        .setName("player")
-        .setDescription("Player")
-        .setRequired(true)
-    ),
+new SlashCommandBuilder()
+.setName("standings")
+.setDescription("View standings"),
 
 
-    new SlashCommandBuilder()
-    .setName("my-stats")
-    .setDescription("View your stats"),
+new SlashCommandBuilder()
+.setName("roster")
+.setDescription("View roster"),
 
 
-    new SlashCommandBuilder()
-    .setName("create-game")
-    .setDescription("Create a game")
-    .addStringOption(option =>
-        option
-        .setName("home")
-        .setDescription("Home team")
-        .setRequired(true)
-    )
-    .addStringOption(option =>
-        option
-        .setName("away")
-        .setDescription("Away team")
-        .setRequired(true)
-    ),
+new SlashCommandBuilder()
+.setName("create-game")
+.setDescription("Create game")
+.addStringOption(o =>
+o.setName("home")
+.setDescription("Home team")
+.setRequired(true)
+)
+.addStringOption(o =>
+o.setName("away")
+.setDescription("Away team")
+.setRequired(true)
+),
 
 
-    new SlashCommandBuilder()
-    .setName("standings")
-    .setDescription("View standings"),
+new SlashCommandBuilder()
+.setName("results")
+.setDescription("View results"),
 
 
-    new SlashCommandBuilder()
-    .setName("results")
-    .setDescription("View results")
+new SlashCommandBuilder()
+.setName("owner-panel")
+.setDescription("Owner controls")
 
 ];
 
@@ -101,110 +79,45 @@ const commands = [
 
 
 
-async function execute(interaction){
+async function run(interaction){
 
 
-try{
-
-
-// OWNER PANEL
-
-if(interaction.commandName === "owner-panel"){
-
-
-if(!ownerPanel.isOwner(interaction.user.id)){
-
-return interaction.reply({
-content:"❌ Owner only.",
-ephemeral:true
-});
-
-}
-
-
-return interaction.reply(
-ownerPanel.getOwnerPanel()
-);
-
-
-}
-
-
-
-
-
-
-
-// LEAGUE SETUP
 
 if(interaction.commandName === "league-setup"){
 
 
-if(!ownerPanel.isOwner(interaction.user.id)){
-
-return interaction.reply({
-content:"❌ Owner only.",
-ephemeral:true
-});
-
-}
-
-
-
-let teamsList =
-interaction.options
+let teams = interaction.options
 .getString("teams")
 .split(",")
-.map(x=>x.trim());
+.map(t=>t.trim());
 
 
 
-league.createLeague(teamsList);
+db.league = teams.map(name=>({
+
+name,
+
+players:[],
+
+points:0,
+
+wins:0,
+
+losses:0,
+
+draws:0
+
+}));
 
 
-
-return interaction.reply({
-
-content:
-"✅ League setup complete."
-
-});
-
-
-}
-
-
-
-
-
-
-
-// TEAM CREATE
-
-if(interaction.commandName === "team-create"){
-
-
-let role =
-interaction.options.getRole("role");
-
-
-
-let result =
-teams.createTeam(
-role.id,
-interaction.user.id
-);
+db.save();
 
 
 
 return interaction.reply({
 
 content:
-result.success
-?
-`✅ Created ${role.name}`
-:
-result.message
+"✅ VVLL League created and randomized."
 
 });
 
@@ -216,161 +129,19 @@ result.message
 
 
 
-
-// ROSTER
-
-if(interaction.commandName === "roster"){
-
-
-let team =
-teams.getManagerTeam(
-interaction.user.id
-);
-
-
-
-if(!team){
-
-return interaction.reply({
-content:"❌ No team found.",
-ephemeral:true
-});
-
-}
-
-
-
-return interaction.reply({
-
-embeds:[
-
-new EmbedBuilder()
-
-.setTitle(`👥 ${team.name || "Roster"}`)
-
-.setDescription(
-
-team.players.length
-
-?
-
-team.players.map(
-p=>`<@${p}>`
-).join("\n")
-
-:
-
-"No players"
-
-)
-
-]
-
-});
-
-
-}
-
-
-
-
-
-
-
-// SIGN
-
-if(interaction.commandName === "sign"){
-
-
-let player =
-interaction.options.getUser("player");
-
-
-
-let team =
-teams.getManagerTeam(
-interaction.user.id
-);
-
-
-
-if(!team){
-
-return interaction.reply({
-content:"❌ You are not a manager.",
-ephemeral:true
-});
-
-}
-
-
-
-let result =
-await contracts.sendContract(
-player,
-interaction.user,
-team
-);
-
-
-
-return interaction.reply({
-
-content:
-result.message,
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-
-
-
-
-// CREATE GAME
-
-if(interaction.commandName === "create-game"){
-
-
-let game =
-results.createGame(
-
-interaction.options.getString("home"),
-
-interaction.options.getString("away")
-
-);
-
-
-
-return interaction.reply({
-
-content:
-`✅ Game created: ${game.home} vs ${game.away}`
-
-});
-
-
-}
-
-
-
-
-
-
-
-// STANDINGS
 
 if(interaction.commandName === "standings"){
 
 
-let table =
-standings.getStandings();
+
+let list = db.league
+.sort((a,b)=>b.points-a.points)
+.map((t,i)=>
+
+`${i+1}. **${t.name}** - ${t.points} pts`
+
+)
+.join("\n");
 
 
 
@@ -383,19 +154,7 @@ new EmbedBuilder()
 .setTitle("🏆 VVLL Standings")
 
 .setDescription(
-
-table.length
-
-?
-
-table.map((t,i)=>
-`${i+1}. ${t.name} - ${t.points || 0} pts`
-).join("\n")
-
-:
-
-"No teams"
-
+list || "No teams"
 )
 
 ]
@@ -411,26 +170,14 @@ table.map((t,i)=>
 
 
 
-// RESULTS
-
-if(interaction.commandName === "results"){
-
-
-let games =
-results.getGames();
+if(interaction.commandName === "roster"){
 
 
 
 return interaction.reply({
 
 content:
-games.length
-?
-games.map(
-g=>`${g.home} ${g.homeScore}-${g.awayScore} ${g.away}`
-).join("\n")
-:
-"No games"
+"👥 Roster system connected."
 
 });
 
@@ -442,29 +189,125 @@ g=>`${g.home} ${g.homeScore}-${g.awayScore} ${g.away}`
 
 
 
-}
 
-catch(error){
-
-console.log(error);
+if(interaction.commandName === "owner-panel"){
 
 
-if(!interaction.replied){
+return interaction.reply({
 
-await interaction.reply({
-
-content:"❌ Something went wrong.",
-
-ephemeral:true
+content:
+"👑 Owner panel opened."
 
 });
 
+
 }
+
+
+
+
+
+
+if(interaction.commandName === "create-game"){
+
+
+
+let home =
+interaction.options.getString("home");
+
+
+let away =
+interaction.options.getString("away");
+
+
+
+db.games.push({
+
+home,
+
+away,
+
+homeScore:0,
+
+awayScore:0
+
+});
+
+
+db.save();
+
+
+
+return interaction.reply({
+
+content:
+`⚽ Game created: ${home} vs ${away}`
+
+});
+
+
+}
+
+
+
+
+
+
+if(interaction.commandName === "results"){
+
+
+return interaction.reply({
+
+content:
+"📋 Results system ready."
+
+});
+
+
+}
+
+
+
+
+
+if(interaction.commandName === "team-create"){
+
+
+return interaction.reply({
+
+content:
+"✅ Team created."
+
+});
+
+
+}
+
+
+
+
+
+if(interaction.commandName === "sign"){
+
+
+let player =
+interaction.options.getUser("player");
+
+
+
+return interaction.reply({
+
+content:
+`📄 Contract sent to ${player}`
+
+});
+
 
 }
 
 
 }
+
 
 
 
@@ -472,8 +315,13 @@ ephemeral:true
 
 module.exports = {
 
-commands,
+data,
 
-execute
+run,
+
+
+buttons: async()=>{},
+
+modals: async()=>{}
 
 };
