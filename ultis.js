@@ -4,51 +4,27 @@
 // =====================================
 
 
-// Create a Discord timestamp
-
-function createTimestamp(date){
-
-
-    return `<t:${Math.floor(
-        new Date(date).getTime() / 1000
-    )}:F>`;
-
-}
-
-
-
-
-
-// Find item by ID
-
-function findById(array, id){
-
-
-    return array.find(
-
-        item => item.id == id
-
-    );
-
-}
-
-
-
-
-
-// Create a random ID
+// Create random ID
 
 function randomId(){
 
 
-    return Math.floor(
+    return (
 
-        Math.random() * 999999999
+        Date.now().toString(36) +
+
+        Math.random()
+
+        .toString(36)
+
+        .substring(2,8)
 
     );
 
 
 }
+
+
 
 
 
@@ -59,36 +35,52 @@ function randomId(){
 function shuffle(array){
 
 
-    return [...array].sort(
 
-        () => Math.random() - 0.5
+    let newArray = [...array];
 
-    );
+
+
+    for(
+        let i = newArray.length - 1;
+        i > 0;
+        i--
+    ){
+
+
+        let j = Math.floor(
+
+            Math.random() * (i + 1)
+
+        );
+
+
+
+        [
+
+            newArray[i],
+
+            newArray[j]
+
+        ] = [
+
+            newArray[j],
+
+            newArray[i]
+
+        ];
+
+
+
+    }
+
+
+
+    return newArray;
 
 
 }
 
 
-
-
-
-// Format standings
-
-function formatStandings(teams){
-
-
-    return teams.map(
-
-        (team,index)=>
-
-        `${index + 1}. ${team.name}
-🏆 ${team.points || 0} pts
-⚽ ${team.goalsFor || 0}-${team.goalsAgainst || 0}`
-
-    ).join("\n\n");
-
-
-}
 
 
 
@@ -96,14 +88,11 @@ function formatStandings(teams){
 
 module.exports = {
 
-    createTimestamp,
-
-    findById,
 
     randomId,
 
-    shuffle,
 
-    formatStandings
+    shuffle
+
 
 };
