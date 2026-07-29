@@ -1,19 +1,49 @@
+// =====================================
+// VVLL LEAGUE BOT
+// CONFIG.JS
+// =====================================
+
+
 module.exports = {
 
-    GUILD_ID: "1521671990505635965",
 
-    OWNER_ID: "1505021865985572940",
+    // Bot owner
+    OWNER_ID:
+    "PUT_YOUR_DISCORD_ID_HERE",
 
-    CO_OWNER_ID: "1429837765281058876",
 
-    MAX_PLAYERS: 15,
 
-    LEAGUE_NAME: "VVLL",
+    // Co owner
+    CO_OWNER_ID:
+    "PUT_CO_OWNER_ID_HERE",
 
-    POINTS: {
-        WIN: 3,
-        DRAW: 1,
-        LOSS: 0
-    }
+
+
+    // Discord server ID
+    GUILD_ID:
+    "PUT_SERVER_ID_HERE",
+
+
+
+
+    // League settings
+
+    LEAGUE_NAME:
+    "VVLL",
+
+
+
+    MAX_PLAYERS:
+
+    15,
+
+
+
+    // Colors
+
+    EMBED_COLOR:
+
+    "#ff0055"
+
 
 };
