@@ -1,162 +1,97 @@
-// =====================================
-// VVLL LEAGUE BOT
-// DATABASE.JS
-// =====================================
+// =======================================
+// VVLL BOT
+// database.js
+// =======================================
 
 const fs = require("fs");
 
 const file = "./vvll-data.json";
 
 
+let data = {
 
-let db = {
+    league: {
+        active: false,
+        name: "VVLL"
+    },
 
-
-    league: [],
-
+    teams: [],
 
     players: [],
 
-
     games: [],
 
-
-    settings: {
-
-        name:"VVLL",
-
-        active:false,
-
-        maxPlayers:15
-
-    }
-
+    stats: []
 
 };
 
 
 
-
-
-
+// Load saved data
 
 function load(){
 
-
     if(fs.existsSync(file)){
 
-
-        db = JSON.parse(
-
-            fs.readFileSync(
-
-                file,
-
-                "utf8"
-
-            )
-
+        data = JSON.parse(
+            fs.readFileSync(file, "utf8")
         );
-
 
     }
 
-
 }
 
 
 
-
-
-
+// Save data
 
 function save(){
 
-
     fs.writeFileSync(
-
         file,
-
-        JSON.stringify(
-
-            db,
-
-            null,
-
-            2
-
-        )
-
+        JSON.stringify(data, null, 2)
     );
-
 
 }
 
 
 
-
-
-
+// Reset everything
 
 function reset(){
 
+    data = {
 
-    db = {
+        league:{
+            active:false,
+            name:"VVLL"
+        },
 
-
-        league:[],
-
+        teams:[],
 
         players:[],
 
-
         games:[],
 
-
-        settings:{
-
-            name:"VVLL",
-
-            active:false,
-
-            maxPlayers:15
-
-        }
-
+        stats:[]
 
     };
 
 
     save();
 
-
 }
-
-
-
-
-
-
-load();
-
-
-
 
 
 
 module.exports = {
 
+    data,
 
-    ...db,
-
-
-    db,
-
+    load,
 
     save,
 
-
     reset
-
 
 };
