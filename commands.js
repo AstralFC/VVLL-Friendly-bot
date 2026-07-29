@@ -1,6 +1,7 @@
 // =======================================
 // VVLL BOT
 // commands.js Part 1/3
+// Clean Command System
 // =======================================
 
 const {
@@ -10,8 +11,7 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    StringSelectMenuBuilder,
-    EmbedBuilder
+    StringSelectMenuBuilder
 } = require("discord.js");
 
 const database = require("./database");
@@ -19,7 +19,7 @@ const database = require("./database");
 
 
 // ===============================
-// SLASH COMMAND LIST
+// ONLY VVLL COMMANDS
 // ===============================
 
 const data = [
@@ -31,7 +31,7 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("team-create")
-    .setDescription("Create a team")
+    .setDescription("Create a VVLL team")
     .addRoleOption(option =>
         option
         .setName("role")
@@ -58,12 +58,12 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("schedule")
-    .setDescription("View game schedule"),
+    .setDescription("View the schedule"),
 
 
     new SlashCommandBuilder()
     .setName("game-result")
-    .setDescription("Submit game result"),
+    .setDescription("Finish a game"),
 
 
     new SlashCommandBuilder()
@@ -73,7 +73,7 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("stat-player")
-    .setDescription("Update player stats"),
+    .setDescription("Add player stats"),
 
 
     new SlashCommandBuilder()
@@ -88,21 +88,16 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("standings")
-    .setDescription("View standings"),
-
-
-    new SlashCommandBuilder()
-    .setName("reset-league")
-    .setDescription("Reset VVLL league")
+    .setDescription("View league standings")
 
 ];
 
 
 
 
-
 // ===============================
 // REGISTER COMMANDS
+// ALSO CLEARS OLD COMMANDS
 // ===============================
 
 async function register(client){
@@ -113,6 +108,25 @@ async function register(client){
 
 
 
+    // Delete old duplicate commands
+
+    await rest.put(
+
+        Routes.applicationGuildCommands(
+            client.user.id,
+            process.env.GUILD_ID
+        ),
+
+        {
+            body:[]
+        }
+
+    );
+
+
+
+    // Add only VVLL commands
+
     await rest.put(
 
         Routes.applicationGuildCommands(
@@ -122,33 +136,26 @@ async function register(client){
 
         {
             body:data.map(
-                command => command.toJSON()
+                command=>command.toJSON()
             )
         }
 
     );
 
+
+    console.log("✅ VVLL commands registered");
+
 }
 
 
 
-
-// Parts 2/3 and 3/3 will add:
-// - command logic
-// - buttons
-// - dropdowns
-// - stats
-// - standings
+// Part 2/3 adds the command actions
 // =======================================
 // VVLL BOT
 // commands.js Part 2/3
-// Command Logic
+// Command Actions
 // =======================================
 
-
-// ===============================
-// SLASH COMMAND HANDLER
-// ===============================
 
 async function run(client, interaction){
 
@@ -160,21 +167,16 @@ async function run(client, interaction){
 
     if(interaction.commandName === "create-league"){
 
+
         db.league = {
-
             active:true,
-
             name:"VVLL"
-
         };
 
 
         db.teams = [];
-
         db.players = [];
-
         db.games = [];
-
         db.stats = [];
 
 
@@ -193,10 +195,10 @@ async function run(client, interaction){
 
 
 
-
     // CREATE TEAM
 
     if(interaction.commandName === "team-create"){
+
 
         const role =
         interaction.options.getRole("role");
@@ -205,16 +207,16 @@ async function run(client, interaction){
 
         if(db.teams.find(t=>t.id===role.id)){
 
+
             return interaction.reply({
 
-                content:"❌ Team already exists.",
+                content:"❌ This team already exists.",
 
                 ephemeral:true
 
             });
 
         }
-
 
 
 
@@ -245,9 +247,10 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            `✅ Team created: **${role.name}**`
+            `✅ Created team **${role.name}**`
 
         });
+
 
     }
 
@@ -256,25 +259,29 @@ async function run(client, interaction){
 
 
 
-    // SIGN PLAYER CONTRACT
+
+    // SIGN PLAYER
 
     if(interaction.commandName === "sign"){
+
+
 
         const player =
         interaction.options.getUser("player");
 
 
 
-        const buttons = new ActionRowBuilder()
+        const row =
+        new ActionRowBuilder()
         .addComponents(
 
             new ButtonBuilder()
 
             .setCustomId(
-                `contract_accept_${player.id}`
+                `accept_contract_${player.id}`
             )
 
-            .setLabel("Accept Contract")
+            .setLabel("Accept")
 
             .setStyle(ButtonStyle.Success),
 
@@ -283,7 +290,7 @@ async function run(client, interaction){
             new ButtonBuilder()
 
             .setCustomId(
-                `contract_decline_${player.id}`
+                `decline_contract_${player.id}`
             )
 
             .setLabel("Decline")
@@ -297,11 +304,12 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            `📄 ${player}, you received a VVLL contract offer.`,
+            `📄 ${player} received a VVLL contract offer.`,
 
-            components:[buttons]
+            components:[row]
 
         });
+
 
     }
 
@@ -315,12 +323,14 @@ async function run(client, interaction){
     if(interaction.commandName === "create-game"){
 
 
+
         if(db.teams.length < 2){
+
 
             return interaction.reply({
 
                 content:
-                "❌ You need at least 2 teams.",
+                "❌ Need at least 2 teams first.",
 
                 ephemeral:true
 
@@ -330,12 +340,13 @@ async function run(client, interaction){
 
 
 
+
         const menu =
         new StringSelectMenuBuilder()
 
-        .setCustomId("select_game_teams")
+        .setCustomId("create_match")
 
-        .setPlaceholder("Select 2 teams")
+        .setPlaceholder("Choose 2 teams")
 
         .setMinValues(2)
 
@@ -358,7 +369,7 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            "⚽ Choose teams for the match:",
+            "⚽ Select the teams:",
 
             components:[
 
@@ -370,15 +381,45 @@ async function run(client, interaction){
 
         });
 
+
     }
+
+
+
+
+
+
+    // SCHEDULE
+
+    if(interaction.commandName === "schedule"){
+
+
+        const games =
+        db.games.map((g,i)=>
+
+        `${i+1}. ${g.home} 🆚 ${g.away}`
+
+        ).join("\n");
+
+
+
+        return interaction.reply({
+
+            content:
+            `📅 VVLL Schedule\n\n${games || "No games created."}`
+
+        });
+
+
+    }
+
 
 }
 // =======================================
 // VVLL BOT
 // commands.js Part 3/3
-// Buttons + Menus + Stats
+// Buttons + Menus + Stats + Exports
 // =======================================
-
 
 
 // ===============================
@@ -393,11 +434,19 @@ async function button(client, interaction){
 
     // ACCEPT CONTRACT
 
-    if(interaction.customId.startsWith("contract_accept_")){
+    if(interaction.customId.startsWith("accept_contract_")){
 
 
         const playerId =
         interaction.customId.split("_")[2];
+
+
+
+        if(!db.players){
+
+            db.players = [];
+
+        }
 
 
 
@@ -425,8 +474,7 @@ async function button(client, interaction){
 
         return interaction.update({
 
-            content:
-            "✅ Contract accepted!",
+            content:"✅ Contract accepted!",
 
             components:[]
 
@@ -434,20 +482,18 @@ async function button(client, interaction){
 
 
     }
-
 
 
 
 
     // DECLINE CONTRACT
 
-    if(interaction.customId.startsWith("contract_decline_")){
+    if(interaction.customId.startsWith("decline_contract_")){
 
 
         return interaction.update({
 
-            content:
-            "❌ Contract declined.",
+            content:"❌ Contract declined.",
 
             components:[]
 
@@ -455,7 +501,6 @@ async function button(client, interaction){
 
 
     }
-
 
 }
 
@@ -466,7 +511,7 @@ async function button(client, interaction){
 
 
 // ===============================
-// SELECT MENU HANDLER
+// DROPDOWN HANDLER
 // ===============================
 
 async function select(client, interaction){
@@ -475,7 +520,8 @@ async function select(client, interaction){
 
 
 
-    if(interaction.customId === "select_game_teams"){
+    if(interaction.customId === "create_match"){
+
 
 
         const teams =
@@ -525,7 +571,6 @@ async function select(client, interaction){
 
     }
 
-
 }
 
 
@@ -535,47 +580,8 @@ async function select(client, interaction){
 
 
 // ===============================
-// OTHER COMMANDS
+// MODALS
 // ===============================
-
-async function extraCommands(client, interaction){
-
-
-    const db = database.data;
-
-
-
-    if(interaction.commandName==="schedule"){
-
-
-        const games =
-        db.games.map((g,i)=>
-
-        `${i+1}. ${g.home} 🆚 ${g.away}`
-
-        ).join("\n");
-
-
-
-        return interaction.reply({
-
-            content:
-            `📅 VVLL Schedule\n\n${games || "No games"}`
-
-        });
-
-
-    }
-
-
-
-}
-
-
-
-
-
-
 
 async function modal(client, interaction){
 
