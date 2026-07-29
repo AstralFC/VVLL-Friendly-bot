@@ -11,15 +11,19 @@ const file = "./vvll-data.json";
 let data = {
 
     league: {
-        active: false,
-        name: "VVLL"
+        active:false,
+        name:"VVLL"
     },
+
 
     teams: [],
 
+
     players: [],
 
+
     games: [],
+
 
     stats: []
 
@@ -27,15 +31,31 @@ let data = {
 
 
 
-// Load saved data
+// Load database
 
 function load(){
 
     if(fs.existsSync(file)){
 
-        data = JSON.parse(
-            fs.readFileSync(file, "utf8")
-        );
+        try {
+
+            data = JSON.parse(
+                fs.readFileSync(file,"utf8")
+            );
+
+            console.log("✅ Database loaded");
+
+        } catch {
+
+            console.log("⚠️ Database reset");
+
+            save();
+
+        }
+
+    } else {
+
+        save();
 
     }
 
@@ -43,20 +63,27 @@ function load(){
 
 
 
-// Save data
+// Save database
 
 function save(){
 
     fs.writeFileSync(
+
         file,
-        JSON.stringify(data, null, 2)
+
+        JSON.stringify(
+            data,
+            null,
+            4
+        )
+
     );
 
 }
 
 
 
-// Reset everything
+// Reset league
 
 function reset(){
 
@@ -86,7 +113,11 @@ function reset(){
 
 module.exports = {
 
-    data,
+    get data(){
+
+        return data;
+
+    },
 
     load,
 
