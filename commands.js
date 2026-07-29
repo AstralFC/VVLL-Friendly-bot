@@ -1,34 +1,37 @@
 // =======================================
 // VVLL BOT
-// commands.js Part 1/6
+// commands.js Part 1/3
 // =======================================
 
 const {
     SlashCommandBuilder,
     REST,
-    Routes
+    Routes,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder,
+    EmbedBuilder
 } = require("discord.js");
-
 
 const database = require("./database");
 
 
 
 // ===============================
-// COMMAND LIST
+// SLASH COMMAND LIST
 // ===============================
 
 const data = [
 
     new SlashCommandBuilder()
     .setName("create-league")
-    .setDescription("Create a VVLL league"),
-
+    .setDescription("Create the VVLL league"),
 
 
     new SlashCommandBuilder()
     .setName("team-create")
-    .setDescription("Create a team from a role")
+    .setDescription("Create a team")
     .addRoleOption(option =>
         option
         .setName("role")
@@ -37,10 +40,9 @@ const data = [
     ),
 
 
-
     new SlashCommandBuilder()
     .setName("sign")
-    .setDescription("Sign a player")
+    .setDescription("Send a player contract")
     .addUserOption(option =>
         option
         .setName("player")
@@ -49,23 +51,19 @@ const data = [
     ),
 
 
-
     new SlashCommandBuilder()
     .setName("create-game")
     .setDescription("Create a league game"),
 
 
-
     new SlashCommandBuilder()
     .setName("schedule")
-    .setDescription("View league schedule"),
-
+    .setDescription("View game schedule"),
 
 
     new SlashCommandBuilder()
     .setName("game-result")
-    .setDescription("Enter game result"),
-
+    .setDescription("Submit game result"),
 
 
     new SlashCommandBuilder()
@@ -73,17 +71,14 @@ const data = [
     .setDescription("Add game stats"),
 
 
-
     new SlashCommandBuilder()
     .setName("stat-player")
-    .setDescription("Edit player stats"),
-
+    .setDescription("Update player stats"),
 
 
     new SlashCommandBuilder()
     .setName("stats")
-    .setDescription("View league stats"),
-
+    .setDescription("View player stats"),
 
 
     new SlashCommandBuilder()
@@ -91,18 +86,17 @@ const data = [
     .setDescription("View your stats"),
 
 
-
     new SlashCommandBuilder()
     .setName("standings")
     .setDescription("View standings"),
 
 
-
     new SlashCommandBuilder()
     .setName("reset-league")
-    .setDescription("Reset league")
+    .setDescription("Reset VVLL league")
 
 ];
+
 
 
 
@@ -139,42 +133,24 @@ async function register(client){
 
 
 
-// Empty handlers for now
-// Parts 2-6 will fill these
+// Parts 2/3 and 3/3 will add:
+// - command logic
+// - buttons
+// - dropdowns
+// - stats
+// - standings
+// =======================================
+// VVLL BOT
+// commands.js Part 2/3
+// Command Logic
+// =======================================
 
-async function run(client, interaction){}
 
-async function button(client, interaction){}
-
-async function select(client, interaction){}
-
-async function modal(client, interaction){}
-
-
-
-
-module.exports = {
-
-    data,
-
-    register,
-
-    run,
-
-    button,
-
-    select,
-
-    modal
-
-};
 // ===============================
-// COMMAND HANDLER
-// PART 2/6
+// SLASH COMMAND HANDLER
 // ===============================
 
 async function run(client, interaction){
-
 
     const db = database.data;
 
@@ -184,8 +160,13 @@ async function run(client, interaction){
 
     if(interaction.commandName === "create-league"){
 
+        db.league = {
 
-        db.league.active = true;
+            active:true,
+
+            name:"VVLL"
+
+        };
 
 
         db.teams = [];
@@ -197,20 +178,14 @@ async function run(client, interaction){
         db.stats = [];
 
 
-
         database.save();
-
 
 
         return interaction.reply({
 
-            content:
-            "🏆 VVLL League has been created!",
-
-            ephemeral:true
+            content:"🏆 VVLL League created!"
 
         });
-
 
     }
 
@@ -218,30 +193,21 @@ async function run(client, interaction){
 
 
 
-    // TEAM CREATE
+
+    // CREATE TEAM
 
     if(interaction.commandName === "team-create"){
-
-
 
         const role =
         interaction.options.getRole("role");
 
 
 
-        const exists =
-        db.teams.find(
-            team => team.id === role.id
-        );
-
-
-
-        if(exists){
+        if(db.teams.find(t=>t.id===role.id)){
 
             return interaction.reply({
 
-                content:
-                "❌ This team already exists.",
+                content:"❌ Team already exists.",
 
                 ephemeral:true
 
@@ -254,9 +220,9 @@ async function run(client, interaction){
 
         db.teams.push({
 
-            id: role.id,
+            id:role.id,
 
-            name: role.name,
+            name:role.name,
 
             players:[],
 
@@ -276,7 +242,6 @@ async function run(client, interaction){
 
 
 
-
         return interaction.reply({
 
             content:
@@ -284,7 +249,6 @@ async function run(client, interaction){
 
         });
 
-
     }
 
 
@@ -292,98 +256,57 @@ async function run(client, interaction){
 
 
 
-
-
-    // SIGN PLAYER
+    // SIGN PLAYER CONTRACT
 
     if(interaction.commandName === "sign"){
-
-
 
         const player =
         interaction.options.getUser("player");
 
 
 
-        const team =
-        db.teams.find(
-            team =>
-            interaction.member.roles.cache.has(team.id)
+        const buttons = new ActionRowBuilder()
+        .addComponents(
+
+            new ButtonBuilder()
+
+            .setCustomId(
+                `contract_accept_${player.id}`
+            )
+
+            .setLabel("Accept Contract")
+
+            .setStyle(ButtonStyle.Success),
+
+
+
+            new ButtonBuilder()
+
+            .setCustomId(
+                `contract_decline_${player.id}`
+            )
+
+            .setLabel("Decline")
+
+            .setStyle(ButtonStyle.Danger)
+
         );
-
-
-
-        if(!team){
-
-            return interaction.reply({
-
-                content:
-                "❌ You need a team role.",
-
-                ephemeral:true
-
-            });
-
-        }
-
-
-
-
-        if(team.players.length >= 15){
-
-
-            return interaction.reply({
-
-                content:
-                "❌ Your team already has the maximum 15 players.",
-
-                ephemeral:true
-
-            });
-
-
-        }
-
-
-
-
-
-        team.players.push({
-
-            id: player.id,
-
-            name: player.username
-
-        });
-
-
-
-        database.save();
-
 
 
 
         return interaction.reply({
 
             content:
-            `✅ ${player} has been signed to **${team.name}**`
+            `📄 ${player}, you received a VVLL contract offer.`,
+
+            components:[buttons]
 
         });
-
 
     }
 
 
 
-}
-// ===============================
-// COMMAND HANDLER
-// PART 3/6
-// ===============================
-
-async function run(client, interaction){
-
-    const db = database.data;
 
 
 
@@ -397,7 +320,7 @@ async function run(client, interaction){
             return interaction.reply({
 
                 content:
-                "❌ You need at least 2 teams first.",
+                "❌ You need at least 2 teams.",
 
                 ephemeral:true
 
@@ -407,166 +330,182 @@ async function run(client, interaction){
 
 
 
-        const team1 = db.teams[0];
+        const menu =
+        new StringSelectMenuBuilder()
 
-        const team2 = db.teams[1];
+        .setCustomId("select_game_teams")
+
+        .setPlaceholder("Select 2 teams")
+
+        .setMinValues(2)
+
+        .setMaxValues(2)
+
+        .addOptions(
+
+            db.teams.map(team=>({
+
+                label:team.name,
+
+                value:team.id
+
+            }))
+
+        );
 
 
 
-        const game = {
+        return interaction.reply({
 
-            id: Date.now().toString(),
+            content:
+            "⚽ Choose teams for the match:",
 
-            home: team1.name,
+            components:[
 
-            away: team2.name,
+                new ActionRowBuilder()
 
-            homeId: team1.id,
+                .addComponents(menu)
 
-            awayId: team2.id,
+            ]
+
+        });
+
+    }
+
+}
+// =======================================
+// VVLL BOT
+// commands.js Part 3/3
+// Buttons + Menus + Stats
+// =======================================
+
+
+
+// ===============================
+// BUTTON HANDLER
+// ===============================
+
+async function button(client, interaction){
+
+    const db = database.data;
+
+
+
+    // ACCEPT CONTRACT
+
+    if(interaction.customId.startsWith("contract_accept_")){
+
+
+        const playerId =
+        interaction.customId.split("_")[2];
+
+
+
+        if(!db.players.find(p=>p.id===playerId)){
+
+
+            db.players.push({
+
+                id:playerId,
+
+                name:"Player",
+
+                team:"Free Agent"
+
+            });
+
+
+        }
+
+
+
+        database.save();
+
+
+
+        return interaction.update({
+
+            content:
+            "✅ Contract accepted!",
+
+            components:[]
+
+        });
+
+
+    }
+
+
+
+
+
+    // DECLINE CONTRACT
+
+    if(interaction.customId.startsWith("contract_decline_")){
+
+
+        return interaction.update({
+
+            content:
+            "❌ Contract declined.",
+
+            components:[]
+
+        });
+
+
+    }
+
+
+}
+
+
+
+
+
+
+
+// ===============================
+// SELECT MENU HANDLER
+// ===============================
+
+async function select(client, interaction){
+
+    const db = database.data;
+
+
+
+    if(interaction.customId === "select_game_teams"){
+
+
+        const teams =
+        interaction.values.map(id=>
+
+            db.teams.find(
+                t=>t.id===id
+            )
+
+        );
+
+
+
+        db.games.push({
+
+            id:Date.now().toString(),
+
+            home:teams[0].name,
+
+            away:teams[1].name,
+
+            homeId:teams[0].id,
+
+            awayId:teams[1].id,
 
             played:false,
 
-            homeScore:0,
-
-            awayScore:0,
-
             winner:null
 
-        };
-
-
-
-        db.games.push(game);
-
-
-        database.save();
-
-
-
-        return interaction.reply({
-
-            content:
-            `⚽ Game created!\n\n**${team1.name}** vs **${team2.name}**`
-
         });
-
-
-    }
-
-
-
-
-
-
-
-
-    // SCHEDULE
-
-    if(interaction.commandName === "schedule"){
-
-
-
-        if(db.games.length === 0){
-
-
-            return interaction.reply({
-
-                content:
-                "📅 No games scheduled.",
-
-                ephemeral:true
-
-            });
-
-
-        }
-
-
-
-        let list = db.games.map(
-
-            (game,index)=>
-
-            `**Game ${index+1}**\n${game.home} 🆚 ${game.away}\nStatus: ${game.played ? "Finished" : "Scheduled"}`
-
-        ).join("\n\n");
-
-
-
-
-        return interaction.reply({
-
-            content:
-            `📅 **VVLL Schedule**\n\n${list}`
-
-        });
-
-
-
-    }
-
-
-}
-// ===============================
-// COMMAND HANDLER
-// PART 5/6
-// ===============================
-
-async function run(client, interaction){
-
-    const db = database.data;
-
-
-
-    // STAT PLAYER
-
-    if(interaction.commandName === "stat-player"){
-
-
-        const player =
-        interaction.user;
-
-
-
-        let stats =
-        db.stats.find(
-            s => s.id === player.id
-        );
-
-
-
-        if(!stats){
-
-
-            stats = {
-
-                id: player.id,
-
-                name: player.username,
-
-                goals:0,
-
-                assists:0,
-
-                saves:0,
-
-                blocks:0
-
-            };
-
-
-            db.stats.push(stats);
-
-
-        }
-
-
-
-        // Adds a test stat for now
-        // Part 6 will add buttons/forms
-
-        stats.goals += 1;
 
 
 
@@ -574,248 +513,54 @@ async function run(client, interaction){
 
 
 
-        return interaction.reply({
+        return interaction.update({
 
             content:
-            `📊 Updated ${player.username}'s stats\n⚽ Goals: ${stats.goals}`
+            `⚽ Game created!\n\n${teams[0].name} 🆚 ${teams[1].name}`,
+
+            components:[]
 
         });
 
 
     }
-
-
-
-
-
-
-
-    // STAT GAME
-
-    if(interaction.commandName === "stat-game"){
-
-
-
-        const game =
-        db.games.find(
-            g => g.played
-        );
-
-
-
-        if(!game){
-
-            return interaction.reply({
-
-                content:
-                "❌ No completed games.",
-
-                ephemeral:true
-
-            });
-
-        }
-
-
-
-
-        return interaction.reply({
-
-            content:
-            `📊 Stats added for ${game.home} vs ${game.away}`
-
-        });
-
-
-
-    }
-
 
 
 }
+
+
+
+
+
+
+
 // ===============================
-// COMMAND HANDLER
-// PART 6/6
+// OTHER COMMANDS
 // ===============================
 
-async function run(client, interaction){
+async function extraCommands(client, interaction){
+
 
     const db = database.data;
 
 
 
-    // STATS
-
-    if(interaction.commandName === "stats"){
+    if(interaction.commandName==="schedule"){
 
 
-        if(db.stats.length === 0){
+        const games =
+        db.games.map((g,i)=>
 
-            return interaction.reply({
+        `${i+1}. ${g.home} 🆚 ${g.away}`
 
-                content:
-                "📊 No player stats yet."
-
-            });
-
-        }
-
-
-
-        const list = db.stats
-
-        .sort(
-            (a,b)=>b.goals-a.goals
-        )
-
-        .map(
-            (p,i)=>
-            `${i+1}. **${p.name}** - ⚽ ${p.goals} | 🅰 ${p.assists} | 🧤 ${p.saves} | 🧱 ${p.blocks}`
-        )
-
-        .join("\n");
+        ).join("\n");
 
 
 
         return interaction.reply({
 
             content:
-            `📊 **VVLL Player Stats**\n\n${list}`
-
-        });
-
-
-    }
-
-
-
-
-
-
-
-
-    // MY STATS
-
-    if(interaction.commandName === "my-stats"){
-
-
-
-        const player =
-        db.stats.find(
-            p=>p.id===interaction.user.id
-        );
-
-
-
-        if(!player){
-
-            return interaction.reply({
-
-                content:
-                "❌ You have no stats yet.",
-
-                ephemeral:true
-
-            });
-
-        }
-
-
-
-
-        return interaction.reply({
-
-            content:
-
-            `📊 **${player.name}**\n\n`+
-
-            `⚽ Goals: ${player.goals}\n`+
-
-            `🅰 Assists: ${player.assists}\n`+
-
-            `🧤 Saves: ${player.saves}\n`+
-
-            `🧱 Blocks: ${player.blocks}`
-
-        });
-
-
-
-    }
-
-
-
-
-
-
-
-
-    // STANDINGS
-
-    if(interaction.commandName === "standings"){
-
-
-
-        if(db.teams.length === 0){
-
-            return interaction.reply({
-
-                content:
-                "❌ No teams created."
-
-            });
-
-        }
-
-
-
-
-        const table = db.teams
-
-        .sort(
-            (a,b)=>b.points-a.points
-        )
-
-        .map(
-            (t,i)=>
-            `${i+1}. **${t.name}**\n🏆 ${t.points} pts | W ${t.wins} | D ${t.draws} | L ${t.losses}`
-        )
-
-        .join("\n\n");
-
-
-
-
-        return interaction.reply({
-
-            content:
-            `🏆 **VVLL Standings**\n\n${table}`
-
-        });
-
-
-    }
-
-
-
-
-
-
-
-
-    // RESET LEAGUE
-
-    if(interaction.commandName === "reset-league"){
-
-
-        database.reset();
-
-
-
-        return interaction.reply({
-
-            content:
-            "♻️ VVLL League has been reset."
+            `📅 VVLL Schedule\n\n${games || "No games"}`
 
         });
 
@@ -825,3 +570,38 @@ async function run(client, interaction){
 
 
 }
+
+
+
+
+
+
+
+async function modal(client, interaction){
+
+}
+
+
+
+
+
+
+// ===============================
+// EXPORTS
+// ===============================
+
+module.exports = {
+
+    data,
+
+    register,
+
+    run,
+
+    button,
+
+    select,
+
+    modal
+
+};
