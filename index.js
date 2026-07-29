@@ -1,6 +1,6 @@
 // =======================================
 // VVLL BOT
-// index.js (Part 1/3)
+// index.js
 // =======================================
 
 require("dotenv").config();
@@ -11,152 +11,253 @@ const {
     Partials
 } = require("discord.js");
 
+
 const commands = require("./commands");
 const database = require("./database");
 
+
+
 const client = new Client({
-    intents: [
+
+    intents:[
+
         GatewayIntentBits.Guilds,
+
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.DirectMessages
+
+        GatewayIntentBits.GuildMessages
+
     ],
-    partials: [
+
+
+    partials:[
+
         Partials.Channel
+
     ]
+
 });
 
-// Make client available everywhere
+
+
+
+// Make available
+
 client.commands = commands;
+
 client.database = database;
 
-client.once("ready", async () => {
-    console.log(`✅ Logged in as ${client.user.tag}`);
 
-    // Load database
+
+
+// Bot ready
+
+client.once("ready", async ()=>{
+
+
+    console.log(
+        `✅ Logged in as ${client.user.tag}`
+    );
+
+
     database.load();
 
-    // Register slash commands
+
     await commands.register(client);
 
-    console.log("✅ VVLL Bot Ready");
+
+    console.log(
+        "✅ VVLL Bot Ready"
+    );
+
+
 });
-// =======================================
-// VVLL BOT
-// index.js (Part 2/3)
-// =======================================
 
-// Handle every interaction
 
-client.on("interactionCreate", async (interaction) => {
 
-    try {
 
-        // Slash Commands
-        if (interaction.isChatInputCommand()) {
 
-            return commands.run(client, interaction);
 
-        }
 
-        // Buttons
-        if (interaction.isButton()) {
+// Interactions
 
-            return commands.button(client, interaction);
+client.on(
+    "interactionCreate",
+    async interaction=>{
 
-        }
 
-        // Select Menus
-        if (interaction.isStringSelectMenu()) {
+    try{
 
-            return commands.select(client, interaction);
+
+        if(interaction.isChatInputCommand()){
+
+
+            return commands.run(
+                client,
+                interaction
+            );
+
 
         }
 
-        // Modals
-        if (interaction.isModalSubmit()) {
 
-            return commands.modal(client, interaction);
+
+        if(interaction.isButton()){
+
+
+            return commands.button(
+                client,
+                interaction
+            );
+
 
         }
 
-    } catch (err) {
 
-        console.error(err);
 
-        try {
 
-            if (interaction.deferred || interaction.replied) {
+        if(interaction.isStringSelectMenu()){
 
-                await interaction.followUp({
-                    content: "❌ Something went wrong.",
-                    ephemeral: true
-                });
 
-            } else {
+            return commands.select(
+                client,
+                interaction
+            );
 
-                await interaction.reply({
-                    content: "❌ Something went wrong.",
-                    ephemeral: true
-                });
 
-            }
+        }
 
-        } catch {}
+
+
+
+        if(interaction.isModalSubmit()){
+
+
+            return commands.modal(
+                client,
+                interaction
+            );
+
+
+        }
+
+
+
+    }catch(error){
+
+
+        console.error(error);
+
+
+
+        if(!interaction.replied){
+
+
+            await interaction.reply({
+
+                content:
+                "❌ Error happened.",
+
+                ephemeral:true
+
+            });
+
+
+        }
+
 
     }
 
+
 });
-// =======================================
-// VVLL BOT
-// index.js (Part 3/3)
-// =======================================
 
-// Graceful shutdown
 
-process.on("SIGINT", () => {
 
-    console.log("💾 Saving database...");
+
+
+
+
+
+// Shutdown save
+
+process.on(
+"SIGINT",
+()=>{
 
     database.save();
 
-    process.exit(0);
+    process.exit();
 
 });
 
-process.on("SIGTERM", () => {
 
-    console.log("💾 Saving database...");
+
+process.on(
+"SIGTERM",
+()=>{
 
     database.save();
 
-    process.exit(0);
+    process.exit();
 
 });
 
 
 
-// Catch unexpected errors
 
-process.on("unhandledRejection", (error) => {
 
-    console.error("Unhandled Promise Rejection:", error);
+
+
+
+// Error protection
+
+process.on(
+"unhandledRejection",
+error=>{
+
+    console.error(
+        "Unhandled:",
+        error
+    );
 
 });
 
-process.on("uncaughtException", (error) => {
 
-    console.error("Uncaught Exception:", error);
+
+process.on(
+"uncaughtException",
+error=>{
+
+    console.error(
+        "Crash:",
+        error
+    );
 
 });
 
 
 
-// Login bot
 
-if (!process.env.TOKEN) {
-    console.error("❌ TOKEN is missing from your environment variables.");
+
+
+
+
+// Login
+
+if(!process.env.TOKEN){
+
+
+    console.error(
+        "❌ Missing TOKEN"
+    );
+
+
     process.exit(1);
+
 }
 
-client.login(process.env.TOKEN);
+
+
+client.login(
+    process.env.TOKEN
+);
