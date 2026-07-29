@@ -3,45 +3,32 @@
 // INDEX.JS
 // =====================================
 
-
-require("dotenv").config();
-
-
 const {
-
-Client,
-
-GatewayIntentBits,
-
-Collection
-
+    Client,
+    GatewayIntentBits,
+    REST,
+    Routes,
+    Collection
 } = require("discord.js");
+
+const commandsFile = require("./commands");
+const interactions = require("./interactions");
+
+const config = require("./config");
 
 
 
 const client = new Client({
 
-intents:[
+    intents:[
 
-GatewayIntentBits.Guilds,
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.DirectMessages
 
-GatewayIntentBits.GuildMembers,
-
-GatewayIntentBits.DirectMessages
-
-]
+    ]
 
 });
-
-
-
-
-
-const commands = require("./commands");
-
-const interactions = require("./interactions");
-
-
 
 
 
@@ -50,39 +37,74 @@ client.commands = new Collection();
 
 
 
+// Load commands
 
+for(const command of commandsFile.commands){
 
-// =====================================
-// READY
-// =====================================
+    client.commands.set(
+        command.name,
+        command
+    );
 
-
-client.once(
-
-"ready",
-
-async()=>{
-
-
-console.log(
-"=============================="
-);
-
-
-console.log(
-`✅ VVLL ONLINE: ${client.user.tag}`
-);
-
-
-console.log(
-"=============================="
-);
+}
 
 
 
-// Register slash commands
 
-await commands.register(client);
+
+// Bot ready
+
+client.once("ready", async()=>{
+
+
+    console.log(
+        `✅ ${client.user.tag} online`
+    );
+
+
+    const rest = new REST({
+
+        version:"10"
+
+    }).setToken(
+        process.env.TOKEN
+    );
+
+
+
+    try{
+
+
+        await rest.put(
+
+            Routes.applicationCommands(
+                client.user.id
+            ),
+
+            {
+
+                body:
+                commandsFile.commands.map(
+                    cmd => cmd.toJSON()
+                )
+
+            }
+
+        );
+
+
+        console.log(
+            "✅ Commands registered"
+        );
+
+
+    }
+
+    catch(error){
+
+        console.log(error);
+
+    }
 
 
 });
@@ -92,129 +114,69 @@ await commands.register(client);
 
 
 
-// =====================================
-// SLASH COMMAND HANDLER
-// =====================================
-
+// Slash commands
 
 client.on(
-
 "interactionCreate",
 
 async interaction=>{
 
 
-try{
+    try{
 
 
+        if(interaction.isChatInputCommand()){
 
-if(
 
-interaction.isChatInputCommand()
+            return commandsFile.execute(
+                interaction
+            );
 
-){
 
+        }
 
-await commands.run(
-interaction
-);
 
 
-}
+        if(
+            interaction.isButton() ||
+            interaction.isModalSubmit()
+        ){
 
 
+            return interactions.run(
+                interaction
+            );
 
 
+        }
 
 
+    }
 
-// BUTTONS + MODALS
 
-else if(
+    catch(error){
 
-interaction.isButton()
 
-){
+        console.log(error);
 
 
-await interactions.run(
-interaction
-);
+        if(!interaction.replied){
 
 
-}
+            await interaction.reply({
 
+                content:
+                "❌ Something went wrong.",
 
+                ephemeral:true
 
+            });
 
 
-else if(
+        }
 
-interaction.isModalSubmit()
 
-){
-
-
-await interactions.run(
-interaction
-);
-
-
-}
-
-
-
-}
-
-catch(error){
-
-
-console.log(error);
-
-
-
-if(
-
-interaction.deferred
-
-){
-
-await interaction.editReply({
-
-content:
-
-"❌ Something went wrong."
-
-}).catch(()=>{});
-
-
-}
-
-else if(
-
-!interaction.replied
-
-){
-
-await interaction.reply({
-
-content:
-
-"❌ Something went wrong."
-
-,
-
-ephemeral:true
-
-}).catch(()=>{});
-
-
-}
-
-
-
-}
-
+    }
 
 
 });
@@ -225,13 +187,6 @@ ephemeral:true
 
 
 
-// =====================================
-// LOGIN
-// =====================================
-
-
 client.login(
-
-process.env.TOKEN
-
+    process.env.TOKEN
 );
