@@ -9,19 +9,19 @@ module.exports = {
 
     // Bot owner
     OWNER_ID:
-    "PUT_YOUR_DISCORD_ID_HERE",
+    "1505021865985572940",
 
 
 
     // Co owner
     CO_OWNER_ID:
-    "PUT_CO_OWNER_ID_HERE",
+    "1429837765281058876",
 
 
 
     // Discord server ID
     GUILD_ID:
-    "PUT_SERVER_ID_HERE",
+    "1521671990505635965",
 
 
 
