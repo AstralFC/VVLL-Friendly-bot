@@ -4,75 +4,47 @@
 // =====================================
 
 const database = require("./database");
+const standings = require("./standings");
 
 
-// Create a game
-
-function createGame(homeTeam, awayTeam, time = null) {
 
 
-    const game = {
+
+// Create game
+
+function createGame(home, away){
+
+
+    let game = {
+
 
         id: Date.now(),
 
-        home: homeTeam,
 
-        away: awayTeam,
+        home,
 
-        time: time,
 
-        homeScore: 0,
+        away,
 
-        awayScore: 0,
 
-        played:false,
+        homeScore:0,
 
-        playerStats:[]
+
+        awayScore:0,
+
+
+        completed:false,
+
+
+        players:[]
+
 
     };
 
 
+
     database.db.matches.push(game);
 
-    database.save();
-
-
-    return game;
-
-}
-
-
-
-
-
-// Add game result
-
-function addResult(gameId, homeScore, awayScore){
-
-
-    let game = database.db.matches.find(
-
-        g => g.id == gameId
-
-    );
-
-
-
-    if(!game){
-
-        return false;
-
-    }
-
-
-
-    game.homeScore = homeScore;
-
-    game.awayScore = awayScore;
-
-    game.played = true;
-
-
 
     database.save();
 
@@ -80,21 +52,43 @@ function addResult(gameId, homeScore, awayScore){
 
     return game;
 
+
 }
 
 
 
 
 
-// Add player stats from a game
 
-function addPlayerStats(
+
+
+// Get games
+
+function getGames(){
+
+
+    return database.db.matches;
+
+
+}
+
+
+
+
+
+
+
+
+// Finish game
+
+function finishGame(
+
     gameId,
-    playerId,
-    goals = 0,
-    assists = 0,
-    saves = 0,
-    blocks = 0
+
+    homeScore,
+
+    awayScore
+
 ){
 
 
@@ -115,66 +109,34 @@ function addPlayerStats(
 
 
 
-    game.playerStats.push({
 
-        player: playerId,
+    game.homeScore = homeScore;
 
-        goals,
 
-        assists,
+    game.awayScore = awayScore;
 
-        saves,
 
-        blocks
-
-    });
+    game.completed = true;
 
 
 
-    let player = database.db.players.find(
 
-        p => p.id === playerId
+
+
+    standings.updateStandings(
+
+        game.home,
+
+        game.away,
+
+        homeScore,
+
+        awayScore
 
     );
 
 
 
-    if(!player){
-
-
-        player = {
-
-            id:playerId,
-
-            goals:0,
-
-            assists:0,
-
-            saves:0,
-
-            blocks:0,
-
-            games:0
-
-        };
-
-
-        database.db.players.push(player);
-
-
-    }
-
-
-
-    player.goals += goals;
-
-    player.assists += assists;
-
-    player.saves += saves;
-
-    player.blocks += blocks;
-
-    player.games += 1;
 
 
 
@@ -191,15 +153,106 @@ function addPlayerStats(
 
 
 
-// Get games
-
-function getGames(){
 
 
-    return database.db.matches;
+
+// Add player stats
+
+function addPlayerStats(
+
+    playerId,
+
+    stats
+
+){
+
+
+
+    let player =
+
+    database.db.players.find(
+
+        p => p.id === playerId
+
+    );
+
+
+
+
+
+    if(!player){
+
+
+
+        player = {
+
+
+            id:playerId,
+
+
+            goals:0,
+
+
+            assists:0,
+
+
+            saves:0,
+
+
+            blocks:0,
+
+
+            games:0
+
+
+        };
+
+
+
+        database.db.players.push(player);
+
+
+
+    }
+
+
+
+
+
+
+    player.goals += stats.goals || 0;
+
+
+    player.assists += stats.assists || 0;
+
+
+    player.saves += stats.saves || 0;
+
+
+    player.blocks += stats.blocks || 0;
+
+
+    player.games += 1;
+
+
+
+
+
+
+    database.save();
+
+
+
+
+    return true;
 
 
 }
+
+
+
+
+
 
 
 
@@ -208,11 +261,14 @@ function getGames(){
 function getGame(id){
 
 
+
     return database.db.matches.find(
 
         g => g.id == id
 
     );
+
+
 
 }
 
@@ -220,16 +276,24 @@ function getGame(id){
 
 
 
+
+
 module.exports = {
+
 
     createGame,
 
-    addResult,
-
-    addPlayerStats,
 
     getGames,
 
-    getGame
+
+    getGame,
+
+
+    finishGame,
+
+
+    addPlayerStats
+
 
 };
