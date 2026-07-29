@@ -6,101 +6,156 @@
 const database = require("./database");
 
 
-// Update standings after a game
+// Get league standings
+function getStandings() {
 
-function updateStandings(home, away, homeScore, awayScore) {
+    if (!database.db.teams) {
+        return [];
+    }
 
 
-    let homeTeam = database.db.teams.find(
-        t => t.name === home
+    return [...database.db.teams].sort((a, b) => {
+
+
+        // Points first
+        if ((b.points || 0) !== (a.points || 0)) {
+
+            return (b.points || 0) - (a.points || 0);
+
+        }
+
+
+        // Goal difference second
+        const goalDiffA =
+        (a.goalsFor || 0) -
+        (a.goalsAgainst || 0);
+
+
+        const goalDiffB =
+        (b.goalsFor || 0) -
+        (b.goalsAgainst || 0);
+
+
+        return goalDiffB - goalDiffA;
+
+
+    });
+
+}
+
+
+
+
+// Update standings after a finished game
+function updateStandings(
+    homeTeam,
+    awayTeam,
+    homeScore,
+    awayScore
+) {
+
+
+    const home =
+    database.db.teams.find(
+        t => t.name === homeTeam
     );
 
 
-    let awayTeam = database.db.teams.find(
-        t => t.name === away
+    const away =
+    database.db.teams.find(
+        t => t.name === awayTeam
     );
 
 
-    if(!homeTeam || !awayTeam) return false;
+    if (!home || !away) {
 
-
-
-    homeTeam.played = (homeTeam.played || 0) + 1;
-    awayTeam.played = (awayTeam.played || 0) + 1;
-
-
-    homeTeam.goalsFor =
-    (homeTeam.goalsFor || 0) + homeScore;
-
-
-    homeTeam.goalsAgainst =
-    (homeTeam.goalsAgainst || 0) + awayScore;
-
-
-    awayTeam.goalsFor =
-    (awayTeam.goalsFor || 0) + awayScore;
-
-
-    awayTeam.goalsAgainst =
-    (awayTeam.goalsAgainst || 0) + homeScore;
-
-
-
-    if(homeScore > awayScore){
-
-
-        homeTeam.wins =
-        (homeTeam.wins || 0) + 1;
-
-
-        awayTeam.losses =
-        (awayTeam.losses || 0) + 1;
-
-
-        homeTeam.points =
-        (homeTeam.points || 0) + 3;
-
+        return false;
 
     }
 
 
 
-    else if(homeScore < awayScore){
+    home.played =
+    (home.played || 0) + 1;
 
 
-        awayTeam.wins =
-        (awayTeam.wins || 0) + 1;
+    away.played =
+    (away.played || 0) + 1;
 
 
-        homeTeam.losses =
-        (homeTeam.losses || 0) + 1;
+
+    home.goalsFor =
+    (home.goalsFor || 0) + homeScore;
 
 
-        awayTeam.points =
-        (awayTeam.points || 0) + 3;
+    home.goalsAgainst =
+    (home.goalsAgainst || 0) + awayScore;
+
+
+
+    away.goalsFor =
+    (away.goalsFor || 0) + awayScore;
+
+
+    away.goalsAgainst =
+    (away.goalsAgainst || 0) + homeScore;
+
+
+
+
+    if (homeScore > awayScore) {
+
+
+        home.wins =
+        (home.wins || 0) + 1;
+
+
+        away.losses =
+        (away.losses || 0) + 1;
+
+
+        home.points =
+        (home.points || 0) + 3;
 
 
     }
 
 
-
-    else{
-
-
-        homeTeam.draws =
-        (homeTeam.draws || 0) + 1;
+    else if (awayScore > homeScore) {
 
 
-        awayTeam.draws =
-        (awayTeam.draws || 0) + 1;
+        away.wins =
+        (away.wins || 0) + 1;
 
 
-        homeTeam.points =
-        (homeTeam.points || 0) + 1;
+        home.losses =
+        (home.losses || 0) + 1;
 
 
-        awayTeam.points =
-        (awayTeam.points || 0) + 1;
+        away.points =
+        (away.points || 0) + 3;
+
+
+    }
+
+
+    else {
+
+
+        home.draws =
+        (home.draws || 0) + 1;
+
+
+        away.draws =
+        (away.draws || 0) + 1;
+
+
+        home.points =
+        (home.points || 0) + 1;
+
+
+        away.points =
+        (away.points || 0) + 1;
 
 
     }
@@ -118,50 +173,11 @@ function updateStandings(home, away, homeScore, awayScore) {
 
 
 
-// Get sorted standings
-
-function getStandings(){
-
-
-    return database.db.teams.sort(
-
-        (a,b)=>{
+// Reset league stats
+function resetStandings() {
 
 
-            if((b.points||0)!==(a.points||0))
-
-                return (b.points||0)-(a.points||0);
-
-
-
-            let bGD =
-            (b.goalsFor||0)-(b.goalsAgainst||0);
-
-
-            let aGD =
-            (a.goalsFor||0)-(a.goalsAgainst||0);
-
-
-            return bGD-aGD;
-
-
-        }
-
-    );
-
-
-}
-
-
-
-
-
-// Reset league standings
-
-function resetStandings(){
-
-
-    database.db.teams.forEach(team=>{
+    database.db.teams.forEach(team => {
 
 
         team.played = 0;
@@ -182,7 +198,37 @@ function resetStandings(){
     });
 
 
+
     database.save();
+
+
+    return true;
+
+}
+
+
+
+
+
+// Create playoff bracket
+function createBracket() {
+
+
+    const teams =
+    getStandings();
+
+
+
+    return {
+
+        quarterFinals:
+        teams.slice(0,8),
+
+        semiFinals: [],
+
+        final: []
+
+    };
 
 
 }
@@ -193,12 +239,12 @@ function resetStandings(){
 
 module.exports = {
 
+    getStandings,
 
     updateStandings,
 
-    getStandings,
+    resetStandings,
 
-    resetStandings
-
+    createBracket
 
 };
