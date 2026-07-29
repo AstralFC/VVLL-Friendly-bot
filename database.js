@@ -1,60 +1,112 @@
 // =====================================
-// VVLL DATABASE SYSTEM
+// VVLL LEAGUE BOT
+// DATABASE.JS
 // =====================================
 
 const fs = require("fs");
 
-const FILE = "./vvll-data.json";
+const FILE = "./vvll_data.json";
+
 
 
 let db = {
 
-    teams: [],
 
-    players: [],
+settings: {
 
-    contracts: [],
+league:"VVLL",
 
-    matches: []
+active:false
+
+},
+
+
+teams:[],
+
+
+players:[],
+
+
+matches:[]
+
 
 };
 
 
 
 
-// Load database
 
 function load(){
 
-    if(fs.existsSync(FILE)){
 
-        db = JSON.parse(
-            fs.readFileSync(FILE)
-        );
+if(
+fs.existsSync(FILE)
+){
 
-    }
+
+try{
+
+
+db = JSON.parse(
+
+fs.readFileSync(
+FILE,
+"utf8"
+)
+
+);
+
+
+console.log(
+"✅ Database loaded"
+);
+
+
+
+}
+
+catch(err){
+
+console.log(
+"❌ Database load error",
+err
+);
+
+}
+
+
+}
+
 
 }
 
 
 
-// Save database
+
 
 function save(){
 
-    fs.writeFileSync(
 
-        FILE,
+fs.writeFileSync(
 
-        JSON.stringify(
-            db,
-            null,
-            4
-        )
+FILE,
 
-    );
+JSON.stringify(
+
+db,
+
+null,
+
+2
+
+)
+
+);
+
 
 }
+
+
 
 
 
@@ -62,10 +114,12 @@ load();
 
 
 
+
+
 module.exports = {
 
-    db,
+db,
 
-    save
+save
 
 };
