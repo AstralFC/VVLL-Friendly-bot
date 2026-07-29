@@ -5,33 +5,41 @@
 
 const fs = require("fs");
 
-const FILE = "./vvll-data.json";
+const file = "./vvll-data.json";
 
 
-// Default database
+
+
 
 let db = {
 
-    settings: {
 
-        league: "VVLL",
+    settings:{
 
-        active: false,
 
-        week: 1
+        active:false,
+
+
+        league:"VVLL"
+
 
     },
 
 
-    teams: [],
+
+    teams:[],
 
 
-    matches: [],
+    players:[],
 
 
-    players: []
+    matches:[]
+
 
 };
+
+
+
 
 
 
@@ -40,22 +48,34 @@ let db = {
 
 function load(){
 
-    if(fs.existsSync(FILE)){
 
 
-        const data = fs.readFileSync(
-            FILE,
-            "utf8"
+    if(fs.existsSync(file)){
+
+
+
+        db = JSON.parse(
+
+            fs.readFileSync(
+
+                file,
+
+                "utf8"
+
+            )
+
         );
 
-
-        db = JSON.parse(data);
 
 
     }
 
 
+
 }
+
+
+
 
 
 
@@ -65,14 +85,19 @@ function load(){
 function save(){
 
 
+
     fs.writeFileSync(
 
-        FILE,
+        file,
 
         JSON.stringify(
+
             db,
+
             null,
-            4
+
+            2
+
         )
 
     );
@@ -83,20 +108,26 @@ function save(){
 
 
 
-// Reset everything
+
+
+
+// Reset database
 
 function reset(){
 
 
+
     db = {
 
-        settings: {
 
-            league:"VVLL",
+        settings:{
+
 
             active:false,
 
-            week:1
+
+            league:"VVLL"
+
 
         },
 
@@ -104,17 +135,21 @@ function reset(){
         teams:[],
 
 
-        matches:[],
+        players:[],
 
 
-        players:[]
+        matches:[]
+
 
     };
 
 
+
     save();
 
+
 }
+
 
 
 
@@ -126,14 +161,20 @@ load();
 
 
 
+
 module.exports = {
+
 
     db,
 
+
     save,
 
-    load,
 
-    reset
+    reset,
+
+
+    load
+
 
 };
