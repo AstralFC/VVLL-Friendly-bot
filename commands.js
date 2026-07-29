@@ -19,14 +19,14 @@ const database = require("./database");
 
 
 // ===============================
-// ONLY VVLL COMMANDS
+// VVLL COMMANDS ONLY
 // ===============================
 
 const data = [
 
     new SlashCommandBuilder()
     .setName("create-league")
-    .setDescription("Create the VVLL league"),
+    .setDescription("Create VVLL league"),
 
 
     new SlashCommandBuilder()
@@ -42,28 +42,28 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("sign")
-    .setDescription("Send a player contract")
+    .setDescription("Send player contract")
     .addUserOption(option =>
         option
         .setName("player")
-        .setDescription("Player to sign")
+        .setDescription("Player")
         .setRequired(true)
     ),
 
 
     new SlashCommandBuilder()
     .setName("create-game")
-    .setDescription("Create a league game"),
+    .setDescription("Create a game"),
 
 
     new SlashCommandBuilder()
     .setName("schedule")
-    .setDescription("View the schedule"),
+    .setDescription("View schedule"),
 
 
     new SlashCommandBuilder()
     .setName("game-result")
-    .setDescription("Finish a game"),
+    .setDescription("Submit game result"),
 
 
     new SlashCommandBuilder()
@@ -78,7 +78,7 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("stats")
-    .setDescription("View player stats"),
+    .setDescription("View stats"),
 
 
     new SlashCommandBuilder()
@@ -88,33 +88,35 @@ const data = [
 
     new SlashCommandBuilder()
     .setName("standings")
-    .setDescription("View league standings")
+    .setDescription("View standings")
 
 ];
 
 
 
 
+
 // ===============================
-// REGISTER COMMANDS
-// ALSO CLEARS OLD COMMANDS
+// REGISTER + CLEAR OLD COMMANDS
 // ===============================
 
 async function register(client){
 
+
     const rest = new REST({
+
         version:"10"
+
     }).setToken(process.env.TOKEN);
 
 
 
-    // Delete old duplicate commands
+    // Clear global commands
 
     await rest.put(
 
-        Routes.applicationGuildCommands(
-            client.user.id,
-            process.env.GUILD_ID
+        Routes.applicationCommands(
+            client.user.id
         ),
 
         {
@@ -125,31 +127,56 @@ async function register(client){
 
 
 
-    // Add only VVLL commands
+    // Clear server commands
 
     await rest.put(
 
         Routes.applicationGuildCommands(
+
             client.user.id,
+
             process.env.GUILD_ID
+
         ),
 
         {
-            body:data.map(
-                command=>command.toJSON()
-            )
+            body:[]
         }
 
     );
 
 
-    console.log("✅ VVLL commands registered");
+
+    // Add VVLL commands
+
+    await rest.put(
+
+        Routes.applicationGuildCommands(
+
+            client.user.id,
+
+            process.env.GUILD_ID
+
+        ),
+
+        {
+
+            body:data.map(
+                command=>command.toJSON()
+            )
+
+        }
+
+    );
+
+
+    console.log("✅ VVLL commands loaded");
 
 }
 
 
 
-// Part 2/3 adds the command actions
+// Part 2/3 = command actions
 // =======================================
 // VVLL BOT
 // commands.js Part 2/3
@@ -169,14 +196,20 @@ async function run(client, interaction){
 
 
         db.league = {
+
             active:true,
+
             name:"VVLL"
+
         };
 
 
         db.teams = [];
+
         db.players = [];
+
         db.games = [];
+
         db.stats = [];
 
 
@@ -195,6 +228,7 @@ async function run(client, interaction){
 
 
 
+
     // CREATE TEAM
 
     if(interaction.commandName === "team-create"){
@@ -205,28 +239,11 @@ async function run(client, interaction){
 
 
 
-        if(db.teams.find(t=>t.id===role.id)){
-
-
-            return interaction.reply({
-
-                content:"❌ This team already exists.",
-
-                ephemeral:true
-
-            });
-
-        }
-
-
-
         db.teams.push({
 
             id:role.id,
 
             name:role.name,
-
-            players:[],
 
             wins:0,
 
@@ -234,7 +251,9 @@ async function run(client, interaction){
 
             draws:0,
 
-            points:0
+            points:0,
+
+            players:[]
 
         });
 
@@ -247,7 +266,7 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            `✅ Created team **${role.name}**`
+            `✅ Team created: **${role.name}**`
 
         });
 
@@ -265,7 +284,6 @@ async function run(client, interaction){
     if(interaction.commandName === "sign"){
 
 
-
         const player =
         interaction.options.getUser("player");
 
@@ -273,29 +291,35 @@ async function run(client, interaction){
 
         const row =
         new ActionRowBuilder()
+
         .addComponents(
 
+
             new ButtonBuilder()
 
             .setCustomId(
-                `accept_contract_${player.id}`
+                `contract_accept_${player.id}`
             )
 
-            .setLabel("Accept")
+            .setLabel("Accept Contract")
 
-            .setStyle(ButtonStyle.Success),
+            .setStyle(
+                ButtonStyle.Success
+            ),
 
 
 
             new ButtonBuilder()
 
             .setCustomId(
-                `decline_contract_${player.id}`
+                `contract_decline_${player.id}`
             )
 
             .setLabel("Decline")
 
-            .setStyle(ButtonStyle.Danger)
+            .setStyle(
+                ButtonStyle.Danger
+            )
 
         );
 
@@ -304,7 +328,7 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            `📄 ${player} received a VVLL contract offer.`,
+            `📄 ${player} received a VVLL contract.`,
 
             components:[row]
 
@@ -318,19 +342,18 @@ async function run(client, interaction){
 
 
 
+
     // CREATE GAME
 
     if(interaction.commandName === "create-game"){
 
 
-
         if(db.teams.length < 2){
-
 
             return interaction.reply({
 
                 content:
-                "❌ Need at least 2 teams first.",
+                "❌ Create at least 2 teams first.",
 
                 ephemeral:true
 
@@ -340,13 +363,16 @@ async function run(client, interaction){
 
 
 
-
         const menu =
         new StringSelectMenuBuilder()
 
-        .setCustomId("create_match")
+        .setCustomId(
+            "game_select"
+        )
 
-        .setPlaceholder("Choose 2 teams")
+        .setPlaceholder(
+            "Choose teams"
+        )
 
         .setMinValues(2)
 
@@ -369,7 +395,7 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            "⚽ Select the teams:",
+            "⚽ Select two teams:",
 
             components:[
 
@@ -389,15 +415,16 @@ async function run(client, interaction){
 
 
 
+
     // SCHEDULE
 
     if(interaction.commandName === "schedule"){
 
 
         const games =
-        db.games.map((g,i)=>
+        db.games.map((game,index)=>
 
-        `${i+1}. ${g.home} 🆚 ${g.away}`
+        `${index+1}. ${game.home} 🆚 ${game.away}`
 
         ).join("\n");
 
@@ -406,7 +433,7 @@ async function run(client, interaction){
         return interaction.reply({
 
             content:
-            `📅 VVLL Schedule\n\n${games || "No games created."}`
+            `📅 VVLL Schedule\n\n${games || "No games"}`
 
         });
 
@@ -418,8 +445,9 @@ async function run(client, interaction){
 // =======================================
 // VVLL BOT
 // commands.js Part 3/3
-// Buttons + Menus + Stats + Exports
+// Buttons + Menus + Stats + Export
 // =======================================
+
 
 
 // ===============================
@@ -432,12 +460,10 @@ async function button(client, interaction){
 
 
 
-    // ACCEPT CONTRACT
-
-    if(interaction.customId.startsWith("accept_contract_")){
+    if(interaction.customId.startsWith("contract_accept_")){
 
 
-        const playerId =
+        const id =
         interaction.customId.split("_")[2];
 
 
@@ -450,21 +476,15 @@ async function button(client, interaction){
 
 
 
-        if(!db.players.find(p=>p.id===playerId)){
+        db.players.push({
 
+            id:id,
 
-            db.players.push({
+            name:"Player",
 
-                id:playerId,
+            team:"Free Agent"
 
-                name:"Player",
-
-                team:"Free Agent"
-
-            });
-
-
-        }
+        });
 
 
 
@@ -474,7 +494,8 @@ async function button(client, interaction){
 
         return interaction.update({
 
-            content:"✅ Contract accepted!",
+            content:
+            "✅ Contract accepted!",
 
             components:[]
 
@@ -486,14 +507,14 @@ async function button(client, interaction){
 
 
 
-    // DECLINE CONTRACT
 
-    if(interaction.customId.startsWith("decline_contract_")){
+    if(interaction.customId.startsWith("contract_decline_")){
 
 
         return interaction.update({
 
-            content:"❌ Contract declined.",
+            content:
+            "❌ Contract declined.",
 
             components:[]
 
@@ -501,6 +522,7 @@ async function button(client, interaction){
 
 
     }
+
 
 }
 
@@ -520,15 +542,14 @@ async function select(client, interaction){
 
 
 
-    if(interaction.customId === "create_match"){
-
+    if(interaction.customId === "game_select"){
 
 
         const teams =
-        interaction.values.map(id=>
+        interaction.values.map(id =>
 
             db.teams.find(
-                t=>t.id===id
+                team=>team.id===id
             )
 
         );
@@ -537,7 +558,7 @@ async function select(client, interaction){
 
         db.games.push({
 
-            id:Date.now().toString(),
+            id:Date.now(),
 
             home:teams[0].name,
 
@@ -562,7 +583,7 @@ async function select(client, interaction){
         return interaction.update({
 
             content:
-            `⚽ Game created!\n\n${teams[0].name} 🆚 ${teams[1].name}`,
+            `⚽ Game created!\n${teams[0].name} 🆚 ${teams[1].name}`,
 
             components:[]
 
@@ -579,13 +600,18 @@ async function select(client, interaction){
 
 
 
+
 // ===============================
 // MODALS
 // ===============================
 
 async function modal(client, interaction){
 
+    return;
+
 }
+
+
 
 
 
