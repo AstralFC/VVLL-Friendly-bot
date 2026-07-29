@@ -9,31 +9,27 @@ const file = "./vvll-data.json";
 
 
 
-
-
 let db = {
 
 
-    settings:{
+    league: [],
 
+
+    players: [],
+
+
+    games: [],
+
+
+    settings: {
+
+        name:"VVLL",
 
         active:false,
 
+        maxPlayers:15
 
-        league:"VVLL"
-
-
-    },
-
-
-
-    teams:[],
-
-
-    players:[],
-
-
-    matches:[]
+    }
 
 
 };
@@ -44,14 +40,10 @@ let db = {
 
 
 
-// Load database
-
 function load(){
 
 
-
     if(fs.existsSync(file)){
-
 
 
         db = JSON.parse(
@@ -67,9 +59,7 @@ function load(){
         );
 
 
-
     }
-
 
 
 }
@@ -80,10 +70,7 @@ function load(){
 
 
 
-// Save database
-
 function save(){
-
 
 
     fs.writeFileSync(
@@ -111,38 +98,33 @@ function save(){
 
 
 
-// Reset database
-
 function reset(){
-
 
 
     db = {
 
 
-        settings:{
-
-
-            active:false,
-
-
-            league:"VVLL"
-
-
-        },
-
-
-        teams:[],
+        league:[],
 
 
         players:[],
 
 
-        matches:[]
+        games:[],
+
+
+        settings:{
+
+            name:"VVLL",
+
+            active:false,
+
+            maxPlayers:15
+
+        }
 
 
     };
-
 
 
     save();
@@ -165,16 +147,16 @@ load();
 module.exports = {
 
 
+    ...db,
+
+
     db,
 
 
     save,
 
 
-    reset,
-
-
-    load
+    reset
 
 
 };
