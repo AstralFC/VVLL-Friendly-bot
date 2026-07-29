@@ -3,8 +3,8 @@
 // INTERACTIONS.JS
 // =====================================
 
-const ownerPanel = require("./ownerPanel");
 const contracts = require("./contracts");
+const ownerPanel = require("./ownerPanel");
 const database = require("./database");
 
 
@@ -15,22 +15,23 @@ async function run(interaction) {
     try {
 
 
-
-        // ============================
+        // ==========================
         // BUTTONS
-        // ============================
+        // ==========================
 
         if(interaction.isButton()) {
 
 
 
-            // OWNER PANEL BUTTONS
+            // OWNER PANEL
 
             if(
-                interaction.customId.startsWith("league_") ||
-                interaction.customId.startsWith("reset_") ||
-                interaction.customId.startsWith("view_") ||
-                interaction.customId.startsWith("manage_")
+                interaction.customId === "league_setup" ||
+                interaction.customId === "reset_league" ||
+                interaction.customId === "view_standings" ||
+                interaction.customId === "manage_games" ||
+                interaction.customId === "manage_stats" ||
+                interaction.customId === "manage_teams"
             ){
 
                 return ownerPanel.handlePanel(interaction);
@@ -50,13 +51,16 @@ async function run(interaction) {
             ){
 
 
-                const parts =
+                const data =
                 interaction.customId.split("_");
 
 
-                const teamRole = parts[2];
+                const teamRole =
+                data[2];
 
-                const playerId = parts[3];
+
+                const playerId =
+                data[3];
 
 
 
@@ -68,13 +72,13 @@ async function run(interaction) {
 
 
 
-                if(accepted){
+                if(!accepted){
 
 
                     return interaction.update({
 
                         content:
-                        "✅ Contract accepted! You have joined the team.",
+                        "❌ Contract expired or team is full.",
 
                         components:[]
 
@@ -84,20 +88,15 @@ async function run(interaction) {
                 }
 
 
-                else{
 
+                return interaction.update({
 
-                    return interaction.update({
+                    content:
+                    "✅ Contract accepted! You joined the team.",
 
-                        content:
-                        "❌ This contract is no longer available.",
+                    components:[]
 
-                        components:[]
-
-                    });
-
-
-                }
+                });
 
 
             }
@@ -106,7 +105,9 @@ async function run(interaction) {
 
 
 
+
             // CONTRACT DECLINE
+
 
             if(
                 interaction.customId ===
@@ -130,6 +131,8 @@ async function run(interaction) {
 
 
 
+            // UNKNOWN BUTTON
+
             return interaction.reply({
 
                 content:
@@ -147,11 +150,9 @@ async function run(interaction) {
 
 
 
-
-
-        // ============================
+        // ==========================
         // MODALS
-        // ============================
+        // ==========================
 
 
         if(interaction.isModalSubmit()) {
@@ -165,19 +166,24 @@ async function run(interaction) {
 
 
                 const teams =
+
                 interaction.fields
+
                 .getTextInputValue(
                     "teams"
                 )
+
                 .split("\n")
+
                 .filter(Boolean);
+
 
 
 
                 return interaction.reply({
 
                     content:
-                    `✅ League setup received with ${teams.length} teams.`,
+                    `✅ ${teams.length} teams added.`,
 
                     ephemeral:true
 
@@ -185,6 +191,8 @@ async function run(interaction) {
 
 
             }
+
+
 
 
         }
@@ -196,7 +204,10 @@ async function run(interaction) {
     catch(error){
 
 
-        console.log(error);
+        console.log(
+            "Interaction Error:",
+            error
+        );
 
 
         if(!interaction.replied){
@@ -219,7 +230,6 @@ async function run(interaction) {
 
 
 }
-
 
 
 
