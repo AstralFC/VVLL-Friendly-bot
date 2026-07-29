@@ -3,18 +3,27 @@
 // INDEX.JS
 // =====================================
 
+require("dotenv").config();
+
+
 const {
     Client,
     GatewayIntentBits,
     REST,
-    Routes,
-    Collection
+    Routes
 } = require("discord.js");
 
-const commandsFile = require("./commands");
-const interactions = require("./interactions");
+
 
 const config = require("./config");
+
+const commandFile =
+require("./commands");
+
+const interactions =
+require("./interactions");
+
+
 
 
 
@@ -23,7 +32,9 @@ const client = new Client({
     intents:[
 
         GatewayIntentBits.Guilds,
+
         GatewayIntentBits.GuildMembers,
+
         GatewayIntentBits.DirectMessages
 
     ]
@@ -32,27 +43,9 @@ const client = new Client({
 
 
 
-client.commands = new Collection();
 
 
 
-
-// Load commands
-
-for(const command of commandsFile.commands){
-
-    client.commands.set(
-        command.name,
-        command
-    );
-
-}
-
-
-
-
-
-// Bot ready
 
 client.once("ready", async()=>{
 
@@ -62,13 +55,19 @@ client.once("ready", async()=>{
     );
 
 
+
     const rest = new REST({
 
         version:"10"
 
-    }).setToken(
+    })
+
+    .setToken(
+
         process.env.TOKEN
+
     );
+
 
 
 
@@ -77,34 +76,52 @@ client.once("ready", async()=>{
 
         await rest.put(
 
-            Routes.applicationCommands(
-                client.user.id
+
+            Routes.applicationGuildCommands(
+
+                client.user.id,
+
+                config.GUILD_ID
+
             ),
+
 
             {
 
                 body:
-                commandsFile.commands.map(
+
+                commandFile.commands.map(
+
                     cmd => cmd.toJSON()
+
                 )
 
             }
 
+
         );
+
 
 
         console.log(
-            "✅ Commands registered"
+            "✅ Slash commands registered"
         );
 
 
     }
 
+
     catch(error){
 
-        console.log(error);
+
+        console.log(
+            "❌ Command register error:",
+            error
+        );
+
 
     }
+
 
 
 });
@@ -114,69 +131,43 @@ client.once("ready", async()=>{
 
 
 
-// Slash commands
+
+
+// Commands
 
 client.on(
+
 "interactionCreate",
 
 async interaction=>{
 
 
-    try{
+    if(interaction.isChatInputCommand()){
 
 
-        if(interaction.isChatInputCommand()){
+        await commandFile.execute(
 
+            interaction
 
-            return commandsFile.execute(
-                interaction
-            );
-
-
-        }
-
-
-
-        if(
-            interaction.isButton() ||
-            interaction.isModalSubmit()
-        ){
-
-
-            return interactions.run(
-                interaction
-            );
-
-
-        }
+        );
 
 
     }
 
 
-    catch(error){
+
+    else{
 
 
-        console.log(error);
+        await interactions.run(
 
+            interaction
 
-        if(!interaction.replied){
-
-
-            await interaction.reply({
-
-                content:
-                "❌ Something went wrong.",
-
-                ephemeral:true
-
-            });
-
-
-        }
+        );
 
 
     }
+
 
 
 });
@@ -188,5 +179,7 @@ async interaction=>{
 
 
 client.login(
+
     process.env.TOKEN
+
 );
