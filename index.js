@@ -1,30 +1,23 @@
-console.log("✅ NEW INDEX.JS LOADED");
-// ===============================
+// =====================================
 // VVLL LEAGUE BOT
 // INDEX.JS
-// ===============================
+// =====================================
+
 
 require("dotenv").config();
 
 
 const {
+
 Client,
-GatewayIntentBits
+
+GatewayIntentBits,
+
+Collection
+
 } = require("discord.js");
 
 
-const commands =
-require("./commands");
-
-
-const interactions =
-require("./interactions");
-
-
-
-// ===============================
-// CLIENT
-// ===============================
 
 const client = new Client({
 
@@ -32,7 +25,9 @@ intents:[
 
 GatewayIntentBits.Guilds,
 
-GatewayIntentBits.GuildMembers
+GatewayIntentBits.GuildMembers,
+
+GatewayIntentBits.DirectMessages
 
 ]
 
@@ -41,21 +36,53 @@ GatewayIntentBits.GuildMembers
 
 
 
-// ===============================
-// READY
-// ===============================
 
-client.once("ready", async()=>{
+const commands = require("./commands");
+
+const interactions = require("./interactions");
+
+
+
+
+
+client.commands = new Collection();
+
+
+
+
+
+
+// =====================================
+// READY
+// =====================================
+
+
+client.once(
+
+"ready",
+
+async()=>{
 
 
 console.log(
-`${client.user.tag} is online`
+"=============================="
+);
+
+
+console.log(
+`✅ VVLL ONLINE: ${client.user.tag}`
+);
+
+
+console.log(
+"=============================="
 );
 
 
 
-await commands.register(client);
+// Register slash commands
 
+await commands.register(client);
 
 
 });
@@ -63,20 +90,28 @@ await commands.register(client);
 
 
 
-// ===============================
-// COMMANDS
-// ===============================
+
+
+// =====================================
+// SLASH COMMAND HANDLER
+// =====================================
+
 
 client.on(
+
 "interactionCreate",
+
 async interaction=>{
 
 
 try{
 
 
+
 if(
+
 interaction.isChatInputCommand()
+
 ){
 
 
@@ -91,12 +126,18 @@ interaction
 
 
 
-if(
+
+
+// BUTTONS + MODALS
+
+else if(
+
 interaction.isButton()
+
 ){
 
 
-await interactions.button(
+await interactions.run(
 interaction
 );
 
@@ -107,12 +148,14 @@ interaction
 
 
 
-if(
+else if(
+
 interaction.isModalSubmit()
+
 ){
 
 
-await interactions.modal(
+await interactions.run(
 interaction
 );
 
@@ -121,29 +164,55 @@ interaction
 
 
 
-}catch(error){
+}
+
+catch(error){
 
 
 console.log(error);
 
 
 
-if(!interaction.replied){
+if(
 
+interaction.deferred
+
+){
+
+await interaction.editReply({
+
+content:
+
+"❌ Something went wrong."
+
+}).catch(()=>{});
+
+
+}
+
+else if(
+
+!interaction.replied
+
+){
 
 await interaction.reply({
 
 content:
-"❌ Something went wrong.",
+
+"❌ Something went wrong."
+
+,
 
 ephemeral:true
 
-});
+}).catch(()=>{});
 
 
 }
 
 
+
 }
 
 
@@ -153,10 +222,16 @@ ephemeral:true
 
 
 
-// ===============================
+
+
+
+// =====================================
 // LOGIN
-// ===============================
+// =====================================
+
 
 client.login(
+
 process.env.TOKEN
+
 );
