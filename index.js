@@ -1,194 +1,162 @@
-// =====================================
-// VVLL LEAGUE BOT
-// INDEX.JS
-// =====================================
+// =======================================
+// VVLL BOT
+// index.js (Part 1/3)
+// =======================================
 
 require("dotenv").config();
 
 const {
     Client,
     GatewayIntentBits,
-    REST,
-    Routes
+    Partials
 } = require("discord.js");
 
-
-const config = require("./database");
 const commands = require("./commands");
-
-
+const database = require("./database");
 
 const client = new Client({
-
-    intents:[
-
+    intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers
-
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages
+    ],
+    partials: [
+        Partials.Channel
     ]
-
 });
 
+// Make client available everywhere
+client.commands = commands;
+client.database = database;
 
+client.once("ready", async () => {
+    console.log(`✅ Logged in as ${client.user.tag}`);
 
+    // Load database
+    database.load();
 
-// When bot starts
+    // Register slash commands
+    await commands.register(client);
 
-client.once("ready", async()=>{
+    console.log("✅ VVLL Bot Ready");
+});
+// =======================================
+// VVLL BOT
+// index.js (Part 2/3)
+// =======================================
 
+// Handle every interaction
 
-    console.log(
-        `✅ ${client.user.tag} is online`
-    );
+client.on("interactionCreate", async (interaction) => {
 
+    try {
 
-    const rest = new REST({
+        // Slash Commands
+        if (interaction.isChatInputCommand()) {
 
-        version:"10"
+            return commands.run(client, interaction);
 
-    }).setToken(
-        process.env.TOKEN
-    );
+        }
 
+        // Buttons
+        if (interaction.isButton()) {
 
+            return commands.button(client, interaction);
 
-    try{
+        }
 
+        // Select Menus
+        if (interaction.isStringSelectMenu()) {
 
-        await rest.put(
+            return commands.select(client, interaction);
 
-            Routes.applicationGuildCommands(
+        }
 
-                client.user.id,
+        // Modals
+        if (interaction.isModalSubmit()) {
 
-                process.env.GUILD_ID
+            return commands.modal(client, interaction);
 
-            ),
+        }
 
-            {
+    } catch (err) {
 
-                body:
+        console.error(err);
 
-                commands.data.map(
+        try {
 
-                    cmd => cmd.toJSON()
+            if (interaction.deferred || interaction.replied) {
 
-                )
+                await interaction.followUp({
+                    content: "❌ Something went wrong.",
+                    ephemeral: true
+                });
+
+            } else {
+
+                await interaction.reply({
+                    content: "❌ Something went wrong.",
+                    ephemeral: true
+                });
 
             }
 
-        );
-
-
-        console.log(
-            "✅ Commands updated"
-        );
-
+        } catch {}
 
     }
 
-    catch(error){
+});
+// =======================================
+// VVLL BOT
+// index.js (Part 3/3)
+// =======================================
 
-        console.log(error);
+// Graceful shutdown
 
-    }
+process.on("SIGINT", () => {
 
+    console.log("💾 Saving database...");
+
+    database.save();
+
+    process.exit(0);
+
+});
+
+process.on("SIGTERM", () => {
+
+    console.log("💾 Saving database...");
+
+    database.save();
+
+    process.exit(0);
 
 });
 
 
 
+// Catch unexpected errors
 
+process.on("unhandledRejection", (error) => {
 
+    console.error("Unhandled Promise Rejection:", error);
 
+});
 
-// Commands + Buttons
+process.on("uncaughtException", (error) => {
 
-client.on(
-"interactionCreate",
-
-async interaction=>{
-
-
-    try{
-
-
-        if(interaction.isChatInputCommand()){
-
-
-            return commands.run(
-                interaction
-            );
-
-
-        }
-
-
-
-
-
-        if(interaction.isButton()){
-
-
-            return commands.buttons(
-                interaction
-            );
-
-
-        }
-
-
-
-
-        if(interaction.isModalSubmit()){
-
-
-            return commands.modals(
-                interaction
-            );
-
-
-        }
-
-
-
-    }
-
-
-    catch(error){
-
-
-        console.log(error);
-
-
-        if(!interaction.replied){
-
-
-            interaction.reply({
-
-                content:
-                "❌ Something went wrong.",
-
-                ephemeral:true
-
-            });
-
-
-        }
-
-
-    }
-
-
+    console.error("Uncaught Exception:", error);
 
 });
 
 
 
+// Login bot
 
+if (!process.env.TOKEN) {
+    console.error("❌ TOKEN is missing from your environment variables.");
+    process.exit(1);
+}
 
-
-
-client.login(
-    process.env.TOKEN
-);
+client.login(process.env.TOKEN);
