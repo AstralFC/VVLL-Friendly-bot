@@ -5,77 +5,54 @@
 
 const fs = require("fs");
 
-const FILE = "./vvll_data.json";
+const FILE = "./vvll-data.json";
 
 
+// Default database
 
 let db = {
 
+    settings: {
 
-settings: {
+        league: "VVLL",
 
-league:"VVLL",
+        active: false,
 
-active:false
+        week: 1
 
-},
-
-
-teams:[],
+    },
 
 
-players:[],
+    teams: [],
 
 
-matches:[]
+    matches: [],
 
+
+    players: []
 
 };
 
 
 
 
+// Load database
 
 function load(){
 
-
-if(
-fs.existsSync(FILE)
-){
+    if(fs.existsSync(FILE)){
 
 
-try{
+        const data = fs.readFileSync(
+            FILE,
+            "utf8"
+        );
 
 
-db = JSON.parse(
-
-fs.readFileSync(
-FILE,
-"utf8"
-)
-
-);
+        db = JSON.parse(data);
 
 
-console.log(
-"✅ Database loaded"
-);
-
-
-
-}
-
-catch(err){
-
-console.log(
-"❌ Database load error",
-err
-);
-
-}
-
-
-}
+    }
 
 
 }
@@ -83,26 +60,59 @@ err
 
 
 
+// Save database
 
 function save(){
 
 
-fs.writeFileSync(
+    fs.writeFileSync(
 
-FILE,
+        FILE,
 
-JSON.stringify(
+        JSON.stringify(
+            db,
+            null,
+            4
+        )
 
-db,
+    );
 
-null,
 
-2
+}
 
-)
 
-);
 
+
+// Reset everything
+
+function reset(){
+
+
+    db = {
+
+        settings: {
+
+            league:"VVLL",
+
+            active:false,
+
+            week:1
+
+        },
+
+
+        teams:[],
+
+
+        matches:[],
+
+
+        players:[]
+
+    };
+
+
+    save();
 
 }
 
@@ -118,8 +128,12 @@ load();
 
 module.exports = {
 
-db,
+    db,
 
-save
+    save,
+
+    load,
+
+    reset
 
 };
