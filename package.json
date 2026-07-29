@@ -1,18 +1,13 @@
 {
   "name": "vvll-league-bot",
   "version": "1.0.0",
-  "description": "VVLL League Management Bot",
+  "description": "VVLL League Discord Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "engines": {
-    "node": "20.x"
-  },
   "dependencies": {
-    "@discordjs/rest": "^2.4.0",
-    "discord-api-types": "^0.37.118",
-    "discord.js": "^14.21.0",
-    "dotenv": "^16.4.7"
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.5"
   }
 }
