@@ -10,22 +10,26 @@ const {
     ButtonStyle
 } = require("discord.js");
 
-const teams = require("./teams");
+const database = require("./database");
 
 
 
-// Send contract DM
-
-async function sendContract(player, manager, team, channel) {
 
 
-    if(team.players.length >= teams.MAX_PLAYERS){
+async function sendContract(player, manager, team){
+
+
+
+    if(team.players.length >= 15){
+
 
         return {
-            success:false,
+
             message:
-            `❌ ${team.name} already has ${teams.MAX_PLAYERS} players.`
+            "❌ This team already has 15 players."
+
         };
+
 
     }
 
@@ -35,27 +39,28 @@ async function sendContract(player, manager, team, channel) {
 
     .setColor("#ff0055")
 
-    .setTitle("📄 VVLL Player Contract")
+    .setTitle("📄 VVLL Contract Offer")
 
     .setDescription(`
 
 🏆 Team:
+
 **${team.name}**
 
+
 👔 Manager:
+
 ${manager}
 
 
-You have received a contract offer.
+You have been offered a spot.
 
+Maximum roster size is **15 players**.
 
-⚠️ Maximum roster size:
-**15 players per team**
-
-
-Do you accept?
+Accept or decline below.
 
 `);
+
 
 
 
@@ -64,13 +69,14 @@ Do you accept?
 
     .addComponents(
 
+
         new ButtonBuilder()
 
         .setCustomId(
-            `contract_accept_${team.role}_${player.id}`
+            `contract_accept_${team.id}_${player.id}`
         )
 
-        .setLabel("✅ Accept")
+        .setLabel("Accept")
 
         .setStyle(ButtonStyle.Success),
 
@@ -82,53 +88,33 @@ Do you accept?
             "contract_decline"
         )
 
-        .setLabel("❌ Decline")
+        .setLabel("Decline")
 
         .setStyle(ButtonStyle.Danger)
+
 
     );
 
 
 
 
-    try{
 
+    await player.send({
 
-        await player.send({
+        embeds:[embed],
 
-            embeds:[embed],
+        components:[buttons]
 
-            components:[buttons]
-
-        });
-
-
-
-        return {
-
-            success:true,
-
-            message:
-            "✅ Contract sent."
-
-        };
+    });
 
 
 
-    }catch(error){
+    return {
 
+        message:
+        `✅ Contract sent to ${player.tag}`
 
-        return {
-
-            success:false,
-
-            message:
-            "❌ Cannot DM this player."
-
-        };
-
-
-    }
+    };
 
 
 }
@@ -137,14 +123,18 @@ Do you accept?
 
 
 
-// Accept contract
-
-function acceptContract(playerId, teamRole){
 
 
-    let team = require("./database").db.teams.find(
 
-        t => t.role === teamRole
+function acceptContract(playerId, teamId){
+
+
+
+    const team =
+
+    database.db.teams.find(
+
+        t => t.id === teamId
 
     );
 
@@ -158,7 +148,7 @@ function acceptContract(playerId, teamRole){
 
 
 
-    if(team.players.length >= teams.MAX_PLAYERS){
+    if(team.players.length >= 15){
 
         return false;
 
@@ -176,7 +166,48 @@ function acceptContract(playerId, teamRole){
 
 
 
-    require("./database").save();
+
+    let player =
+
+    database.db.players.find(
+
+        p => p.id === playerId
+
+    );
+
+
+
+
+    if(!player){
+
+
+        player = {
+
+            id: playerId,
+
+            goals:0,
+
+            assists:0,
+
+            saves:0,
+
+            blocks:0,
+
+            games:0
+
+        };
+
+
+        database.db.players.push(player);
+
+
+    }
+
+
+
+
+
+    database.save();
 
 
 
@@ -184,6 +215,7 @@ function acceptContract(playerId, teamRole){
 
 
 }
+
 
 
 
