@@ -1,280 +1,221 @@
 // =====================================
-// VVLL INTERACTIONS
-// BUTTON SYSTEM
+// VVLL LEAGUE BOT
+// INTERACTIONS.JS
 // =====================================
 
-const {
-EmbedBuilder
-}=require("discord.js");
-
-
+const ownerPanel = require("./ownerPanel");
+const contracts = require("./contracts");
 const database = require("./database");
 
 
 
-const STAFF_IDS = [
+async function run(interaction) {
 
-"1505021865985572940",
 
-"1429837765281058876"
+    try {
 
-];
 
 
+        // ============================
+        // BUTTONS
+        // ============================
 
+        if(interaction.isButton()) {
 
 
-async function run(interaction){
 
+            // OWNER PANEL BUTTONS
 
+            if(
+                interaction.customId.startsWith("league_") ||
+                interaction.customId.startsWith("reset_") ||
+                interaction.customId.startsWith("view_") ||
+                interaction.customId.startsWith("manage_")
+            ){
 
-// ================================
-// CONTRACT ACCEPT
-// ================================
+                return ownerPanel.handlePanel(interaction);
 
-if(
-interaction.customId.startsWith("accept_")
-){
+            }
 
 
-let data =
-interaction.customId.split("_");
 
 
 
-let roleId =
-data[1];
+            // CONTRACT ACCEPT
 
+            if(
+                interaction.customId.startsWith(
+                    "contract_accept_"
+                )
+            ){
 
 
-let playerId =
-data[2];
+                const parts =
+                interaction.customId.split("_");
 
 
+                const teamRole = parts[2];
 
-let member =
-await interaction.guild.members.fetch(
-playerId
-);
+                const playerId = parts[3];
 
 
 
-let role =
-interaction.guild.roles.cache.get(
-roleId
-);
+                const accepted =
+                contracts.acceptContract(
+                    playerId,
+                    teamRole
+                );
 
 
 
-if(role){
+                if(accepted){
 
-await member.roles.add(role);
 
-}
+                    return interaction.update({
 
+                        content:
+                        "✅ Contract accepted! You have joined the team.",
 
+                        components:[]
 
+                    });
 
-let team =
-database.db.teams.find(
 
-t=>t.role===roleId
+                }
 
-);
 
+                else{
 
 
-if(team){
+                    return interaction.update({
 
-if(
-!team.players.includes(playerId)
-){
+                        content:
+                        "❌ This contract is no longer available.",
 
-team.players.push(
-playerId
-);
+                        components:[]
 
-}
+                    });
 
-}
 
+                }
 
 
-// Create player stats
+            }
 
-let player =
-database.db.players.find(
 
-p=>p.id===playerId
 
-);
 
 
+            // CONTRACT DECLINE
 
-if(!player){
+            if(
+                interaction.customId ===
+                "contract_decline"
+            ){
 
-database.db.players.push({
 
-id:playerId,
+                return interaction.update({
 
-goals:0,
+                    content:
+                    "❌ Contract declined.",
 
-assists:0,
+                    components:[]
 
-saves:0,
+                });
 
-blocks:0,
 
-games:0,
+            }
 
-potm:0
 
-});
 
-}
 
 
+            return interaction.reply({
 
-database.save();
+                content:
+                "❌ Unknown button.",
 
+                ephemeral:true
 
+            });
 
-await interaction.reply({
 
-embeds:[
+        }
 
-new EmbedBuilder()
 
-.setColor("#00ff88")
 
-.setTitle(
-"✅ Contract Accepted"
-)
 
-.setDescription(`
 
-Welcome to the team!
 
 
-🏆 Team:
-${team.name}
 
+        // ============================
+        // MODALS
+        // ============================
 
-You are now officially signed.
 
-`)
+        if(interaction.isModalSubmit()) {
 
-]
 
-});
 
+            if(
+                interaction.customId ===
+                "league_setup_modal"
+            ){
 
 
-}
+                const teams =
+                interaction.fields
+                .getTextInputValue(
+                    "teams"
+                )
+                .split("\n")
+                .filter(Boolean);
 
 
 
+                return interaction.reply({
 
+                    content:
+                    `✅ League setup received with ${teams.length} teams.`,
 
+                    ephemeral:true
 
-// ================================
-// CONTRACT DECLINE
-// ================================
+                });
 
 
-if(
-interaction.customId==="decline_contract"
-){
+            }
 
-return interaction.reply({
 
-content:
-"❌ Contract declined."
+        }
 
-});
 
-}
 
+    }
 
+    catch(error){
 
 
+        console.log(error);
 
-// ================================
-// RESET LEAGUE
-// ================================
 
-if(
-interaction.customId==="reset_league"
-){
+        if(!interaction.replied){
 
 
-if(
-!STAFF_IDS.includes(
-interaction.user.id
-)
+            await interaction.reply({
 
-){
+                content:
+                "❌ Something went wrong.",
 
-return interaction.reply({
+                ephemeral:true
 
-content:
-"❌ No permission.",
+            });
 
-ephemeral:true
 
-});
+        }
 
-}
 
-
-
-
-database.db.teams.forEach(team=>{
-
-team.points=0;
-
-team.wins=0;
-
-team.draws=0;
-
-team.losses=0;
-
-team.goals=0;
-
-});
-
-
-
-database.db.players.forEach(player=>{
-
-player.goals=0;
-
-player.assists=0;
-
-player.saves=0;
-
-player.blocks=0;
-
-player.games=0;
-
-player.potm=0;
-
-});
-
-
-
-database.save();
-
-
-
-return interaction.reply({
-
-content:
-"🔄 League has been reset.",
-
-ephemeral:true
-
-});
+    }
 
 
 }
@@ -282,57 +223,9 @@ ephemeral:true
 
 
 
-// ================================
-// STATS BUTTON PLACEHOLDER
-// ================================
 
+module.exports = {
 
-if(
-interaction.customId==="manage_stats"
-){
-
-return interaction.reply({
-
-content:
-"📊 Stats manager coming next.",
-
-ephemeral:true
-
-});
-
-}
-
-
-
-
-// ================================
-// TEAM BUTTON
-// ================================
-
-
-if(
-interaction.customId==="manage_teams"
-){
-
-return interaction.reply({
-
-content:
-"🏆 Team manager coming next.",
-
-ephemeral:true
-
-});
-
-}
-
-
-
-}
-
-
-
-module.exports={
-
-run
+    run
 
 };
