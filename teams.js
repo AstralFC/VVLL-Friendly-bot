@@ -4,141 +4,140 @@
 // =====================================
 
 const database = require("./database");
+const utils = require("./utils");
 
-const MAX_PLAYERS = 15;
+
+
 
 
 // Create team
-function createTeam(roleId, managerId) {
+
+function createTeam(roleId, managerId){
+
+
 
     let exists = database.db.teams.find(
-        t => t.role === roleId
+
+        t => t.roleId === roleId
+
     );
 
 
-    if (exists) {
+
+    if(exists){
+
+
         return {
+
             success:false,
-            message:"Team already exists."
+
+            message:"❌ This team already exists."
+
         };
+
+
     }
+
+
 
 
     let team = {
 
-        role: roleId,
+
+        id: utils.randomId(),
+
+
+        roleId: roleId,
+
+
+        name: null,
+
 
         manager: managerId,
 
+
         players: [],
+
 
         points:0,
 
+
         wins:0,
+
 
         draws:0,
 
+
         losses:0,
+
 
         goalsFor:0,
 
+
         goalsAgainst:0
 
+
     };
+
+
 
 
     database.db.teams.push(team);
 
+
     database.save();
 
 
+
+
     return {
+
+
         success:true,
+
+
         team
+
+
     };
+
 
 }
 
 
 
-// Get team by manager
-function getManagerTeam(managerId){
 
-    return database.db.teams.find(
 
-        t => t.manager === managerId
+
+
+
+// Set team name from Discord role
+
+function setTeamName(roleId, name){
+
+
+
+    let team = database.db.teams.find(
+
+        t => t.roleId === roleId
 
     );
 
-}
 
 
+    if(!team){
 
-// Add player to team
-function addPlayer(team, playerId){
-
-
-    if(team.players.length >= MAX_PLAYERS){
-
-        return {
-
-            success:false,
-
-            message:
-            `❌ Team already has ${MAX_PLAYERS} players.`
-
-        };
+        return false;
 
     }
 
 
 
-    if(team.players.includes(playerId)){
-
-        return {
-
-            success:false,
-
-            message:
-            "❌ Player is already on this team."
-
-        };
-
-    }
-
-
-
-    team.players.push(playerId);
+    team.name = name;
 
 
     database.save();
 
-
-    return {
-
-        success:true,
-
-        message:
-        "✅ Player added."
-
-    };
-
-}
-
-
-
-// Remove player
-function removePlayer(team, playerId){
-
-
-    team.players = team.players.filter(
-
-        id => id !== playerId
-
-    );
-
-
-    database.save();
 
 
     return true;
@@ -147,65 +146,179 @@ function removePlayer(team, playerId){
 
 
 
-// Find player's team
-function getPlayerTeam(playerId){
+
+
+
+
+
+// Get manager team
+
+function getManagerTeam(managerId){
+
 
 
     return database.db.teams.find(
 
-        team =>
-
-        team.players.includes(playerId)
+        t => t.manager === managerId
 
     );
 
-}
 
-
-
-// Get roster
-function getRoster(team){
-
-
-    return team.players || [];
 
 }
 
 
 
-// Check if user is manager
-function isManager(userId){
 
 
-    return database.db.teams.some(
 
-        team =>
 
-        team.manager === userId
+
+// Get player team
+
+function getPlayerTeam(playerId){
+
+
+
+    return database.db.teams.find(
+
+        t => t.players.includes(playerId)
 
     );
 
+
+
 }
+
+
+
+
+
+
+
+
+// Add player manually
+
+function addPlayer(teamId, playerId){
+
+
+
+    let team = database.db.teams.find(
+
+        t => t.id === teamId
+
+    );
+
+
+
+    if(!team){
+
+        return false;
+
+    }
+
+
+
+
+    if(team.players.length >= 15){
+
+        return false;
+
+    }
+
+
+
+
+    if(!team.players.includes(playerId)){
+
+
+        team.players.push(playerId);
+
+
+    }
+
+
+
+
+    database.save();
+
+
+
+    return true;
+
+
+}
+
+
+
+
+
+
+
+
+// Remove player
+
+function removePlayer(teamId, playerId){
+
+
+
+    let team = database.db.teams.find(
+
+        t => t.id === teamId
+
+    );
+
+
+
+    if(!team){
+
+        return false;
+
+    }
+
+
+
+    team.players = team.players.filter(
+
+        p => p !== playerId
+
+    );
+
+
+
+    database.save();
+
+
+
+    return true;
+
+
+}
+
+
 
 
 
 
 module.exports = {
 
+
     createTeam,
+
+
+    setTeamName,
+
 
     getManagerTeam,
 
-    addPlayer,
-
-    removePlayer,
 
     getPlayerTeam,
 
-    getRoster,
 
-    isManager,
+    addPlayer,
 
-    MAX_PLAYERS
+
+    removePlayer
+
 
 };
