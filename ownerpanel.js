@@ -12,18 +12,24 @@ const {
 
 const config = require("./config");
 const league = require("./league");
-const standings = require("./standings");
 
 
 
-// Check owner permissions
 
-function isOwner(userId){
+
+// Check owner
+
+function isOwner(id){
+
 
     return (
-        userId === config.OWNER_ID ||
-        userId === config.CO_OWNER_ID
+
+        id === config.OWNER_ID ||
+
+        id === config.CO_OWNER_ID
+
     );
+
 
 }
 
@@ -31,40 +37,51 @@ function isOwner(userId){
 
 
 
-// Create owner panel
+
+
+// Create panel
 
 function getOwnerPanel(){
 
 
+
     const embed = new EmbedBuilder()
+
 
     .setColor("#ff0055")
 
-    .setTitle("🏆 VVLL Owner Panel")
+
+    .setTitle("👑 VVLL Owner Panel")
+
 
     .setDescription(`
 
-Manage the entire league from here.
+Manage your league here.
 
-⚽ League Setup
-👥 Teams
-📋 Rosters
-🎮 Games
-📊 Stats
-🔄 Reset League
+
+🏆 League Setup
+
+🎮 Manage Games
+
+📊 View Standings
+
+🔄 Restart League
+
 
 `);
 
 
 
-    const row = new ActionRowBuilder()
+    const buttons = new ActionRowBuilder()
 
     .addComponents(
 
 
         new ButtonBuilder()
 
-        .setCustomId("league_setup")
+        .setCustomId(
+            "league_setup"
+        )
 
         .setLabel("🏆 League Setup")
 
@@ -74,19 +91,11 @@ Manage the entire league from here.
 
         new ButtonBuilder()
 
-        .setCustomId("reset_league")
+        .setCustomId(
+            "manage_games"
+        )
 
-        .setLabel("🔄 Reset League")
-
-        .setStyle(ButtonStyle.Danger),
-
-
-
-        new ButtonBuilder()
-
-        .setCustomId("view_standings")
-
-        .setLabel("📊 Standings")
+        .setLabel("🎮 Games")
 
         .setStyle(ButtonStyle.Secondary),
 
@@ -94,26 +103,11 @@ Manage the entire league from here.
 
         new ButtonBuilder()
 
-        .setCustomId("manage_games")
+        .setCustomId(
+            "view_standings"
+        )
 
-        .setLabel("🎮 Games")
-
-        .setStyle(ButtonStyle.Secondary)
-
-    );
-
-
-
-    const row2 = new ActionRowBuilder()
-
-    .addComponents(
-
-
-        new ButtonBuilder()
-
-        .setCustomId("manage_stats")
-
-        .setLabel("📈 Edit Stats")
+        .setLabel("📊 Standings")
 
         .setStyle(ButtonStyle.Success),
 
@@ -121,24 +115,37 @@ Manage the entire league from here.
 
         new ButtonBuilder()
 
-        .setCustomId("manage_teams")
+        .setCustomId(
+            "reset_league"
+        )
 
-        .setLabel("👥 Teams")
+        .setLabel("🔄 Reset")
 
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Danger)
+
+
 
     );
 
 
+
+
     return {
+
 
         embeds:[embed],
 
-        components:[row,row2]
+
+        components:[buttons]
+
 
     };
 
+
 }
+
+
+
 
 
 
@@ -149,36 +156,47 @@ Manage the entire league from here.
 async function handlePanel(interaction){
 
 
+
     if(!isOwner(interaction.user.id)){
 
 
         return interaction.reply({
 
-            content:"❌ Owner only.",
+            content:
+            "❌ Owner only.",
 
             ephemeral:true
 
         });
 
+
     }
+
+
+
 
 
 
     if(interaction.customId === "reset_league"){
 
 
+
         league.resetLeague();
+
 
 
         return interaction.reply({
 
-            content:"✅ League has been reset.",
+            content:
+            "✅ League has been reset.",
 
             ephemeral:true
 
         });
 
+
     }
+
 
 
 
@@ -187,23 +205,16 @@ async function handlePanel(interaction){
     if(interaction.customId === "view_standings"){
 
 
-        let data = standings.getStandings();
-
 
         return interaction.reply({
 
             content:
-
-            data.length
-            ? data.map((t,i)=>
-            `${i+1}. ${t.name} - ${t.points || 0} pts`
-            ).join("\n")
-
-            : "No teams yet.",
+            "📊 Opening standings...",
 
             ephemeral:true
 
         });
+
 
     }
 
@@ -211,13 +222,46 @@ async function handlePanel(interaction){
 
 
 
-    return interaction.reply({
 
-        content:`🔧 ${interaction.customId} opened.`,
+    if(interaction.customId === "manage_games"){
 
-        ephemeral:true
 
-    });
+
+        return interaction.reply({
+
+            content:
+            "🎮 Game manager opened.",
+
+            ephemeral:true
+
+        });
+
+
+    }
+
+
+
+
+
+
+    if(interaction.customId === "league_setup"){
+
+
+
+        return interaction.reply({
+
+            content:
+            "🏆 Use /league-setup to create your league.",
+
+            ephemeral:true
+
+        });
+
+
+    }
+
+
+
 
 
 }
@@ -226,12 +270,18 @@ async function handlePanel(interaction){
 
 
 
+
+
 module.exports = {
+
+
+    isOwner,
+
 
     getOwnerPanel,
 
-    handlePanel,
 
-    isOwner
+    handlePanel
+
 
 };
