@@ -1,6 +1,6 @@
-// ====================
-// VVLL BUTTONS.JS
-// ====================
+// =========================
+// VVLL BOT - buttons.js
+// =========================
 
 const fs = require("fs");
 
@@ -23,7 +23,7 @@ function loadDB(){
     }
 
     return JSON.parse(
-        fs.readFileSync(dbFile)
+        fs.readFileSync(dbFile, "utf8")
     );
 
 }
@@ -64,7 +64,7 @@ module.exports = async (interaction)=>{
 
 
 
-        let db = loadDB();
+        const db = loadDB();
 
 
 
@@ -73,7 +73,7 @@ module.exports = async (interaction)=>{
 
 
 
-        let team =
+        const team =
         db.teams[roleId];
 
 
@@ -83,7 +83,7 @@ module.exports = async (interaction)=>{
             return interaction.editReply({
 
                 content:
-                "❌ Team not found.",
+                "❌ Team not found in database.",
 
                 components:[]
 
@@ -93,7 +93,12 @@ module.exports = async (interaction)=>{
 
 
 
-        // ACCEPT CONTRACT
+
+
+        // =================
+        // ACCEPT
+        // =================
+
 
         if(id.startsWith("accept_")){
 
@@ -103,7 +108,7 @@ module.exports = async (interaction)=>{
                 return interaction.editReply({
 
                     content:
-                    "❌ Team server data missing. Send a new contract.",
+                    "❌ Missing server ID. Create a new contract.",
 
                     components:[]
 
@@ -120,19 +125,23 @@ module.exports = async (interaction)=>{
 
 
 
-            const member =
-            await guild.members.fetch(
-                interaction.user.id
-            ).catch(null);
+            let member;
 
 
+            try{
 
-            if(!member){
+                member =
+                await guild.members.fetch(
+                    interaction.user.id
+                );
+
+
+            }catch{
 
                 return interaction.editReply({
 
                     content:
-                    "❌ Join the VVLL server before accepting.",
+                    "❌ You must be inside the VVLL server before accepting.",
 
                     components:[]
 
@@ -154,7 +163,7 @@ module.exports = async (interaction)=>{
                 return interaction.editReply({
 
                     content:
-                    "❌ Team role missing.",
+                    "❌ Team role was deleted.",
 
                     components:[]
 
@@ -164,7 +173,30 @@ module.exports = async (interaction)=>{
 
 
 
-            await member.roles.add(role);
+            try{
+
+                await member.roles.add(role);
+
+            }catch(error){
+
+                console.log(
+                    "ROLE ERROR:",
+                    error
+                );
+
+
+                return interaction.editReply({
+
+                    content:
+                    "❌ I cannot give you the team role. Check bot permissions.",
+
+                    components:[]
+
+                });
+
+            }
+
+
 
 
 
@@ -185,7 +217,7 @@ module.exports = async (interaction)=>{
             await interaction.editReply({
 
                 content:
-                `✅ You signed with **${team.name}**!`,
+                `✅ Contract accepted!\nYou joined **${team.name}**.`,
 
                 components:[]
 
@@ -196,17 +228,18 @@ module.exports = async (interaction)=>{
             const manager =
             await guild.members.fetch(
                 team.managerId
-            ).catch(null);
+            ).catch(()=>null);
 
 
 
             if(manager){
 
                 manager.send(
-                    `🏆 ${interaction.user} signed with **${team.name}**.`
+                    `🏆 ${interaction.user} accepted the contract for **${team.name}**.`
                 ).catch(()=>{});
 
             }
+
 
 
         }
@@ -215,7 +248,9 @@ module.exports = async (interaction)=>{
 
 
 
-        // DECLINE CONTRACT
+        // =================
+        // DECLINE
+        // =================
 
 
         if(id.startsWith("decline_")){
@@ -224,7 +259,7 @@ module.exports = async (interaction)=>{
             await interaction.editReply({
 
                 content:
-                `❌ You declined **${team.name}** contract.`,
+                `❌ You declined the contract from **${team.name}**.`,
 
                 components:[]
 
@@ -239,7 +274,17 @@ module.exports = async (interaction)=>{
     }catch(error){
 
 
-console.log("VVLL BUTTON ERROR FULL:", error);
+        console.log(
+            "========== VVLL BUTTON ERROR =========="
+        );
+
+        console.log(error);
+
+        console.log(error.stack);
+
+        console.log(
+            "======================================="
+        );
 
 
 
@@ -248,7 +293,7 @@ console.log("VVLL BUTTON ERROR FULL:", error);
             await interaction.editReply({
 
                 content:
-                "❌ Contract processing error.",
+                "❌ ERROR: " + error.message,
 
                 components:[]
 
