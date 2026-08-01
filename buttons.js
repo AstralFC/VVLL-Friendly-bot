@@ -1,10 +1,4 @@
-// ====================
-// VVLL BUTTONS 1/2
-// PASTE EVERYTHING BELOW
-// ====================
-
 const fs = require("fs");
-
 
 const dbFile = "./database.json";
 
@@ -19,11 +13,10 @@ function loadDB(){
                 teams:{},
                 players:{},
                 games:{}
-            },null,4)
+            }, null, 4)
         );
 
     }
-
 
     return JSON.parse(
         fs.readFileSync(dbFile)
@@ -47,290 +40,257 @@ function saveDB(data){
 module.exports = async (interaction) => {
 
 
-if(!interaction.isButton()) return;
+    if(!interaction.isButton()) return;
 
 
+    const id = interaction.customId;
 
-const id = interaction.customId;
 
+    if(
+        !id.startsWith("accept_") &&
+        !id.startsWith("decline_")
+    ) return;
 
 
-if(
-!id.startsWith("accept_") &&
-!id.startsWith("decline_")
-){
 
-return;
+    let db = loadDB();
 
-}
 
+    const roleId = id.split("_")[1];
 
 
-let db = loadDB();
+    const team = db.teams[roleId];
 
 
+    if(!team){
 
-let roleId =
-id.split("_")[1];
+        return interaction.reply({
+            content:"❌ This contract has expired.",
+            ephemeral:true
+        });
 
+    }
 
 
-let team =
-db.teams[roleId];
 
+    // =====================
+    // ACCEPT CONTRACT
+    // =====================
 
 
-if(!team){
+    if(id.startsWith("accept_")){
 
-return interaction.reply({
 
-content:"❌ This contract expired.",
+        let guild;
 
-ephemeral:true
 
-});
+        try{
 
-}
+            guild = await interaction.client.guilds.fetch(
+                team.guildId
+            );
 
 
+        }catch(err){
 
-// ====================
-// ACCEPT CONTRACT
-// ====================
+            return interaction.reply({
+                content:
+                "❌ Cannot find the VVLL server.",
+                ephemeral:true
+            });
 
+        }
 
-if(id.startsWith("accept_")){
 
 
-let guild;
+        let member =
+        guild.members.cache.get(
+            interaction.user.id
+        );
 
 
-try {
 
+        if(!member){
 
-guild =
-await interaction.client.guilds.fetch(
-team.guildId
-);
+            try{
 
+                member =
+                await guild.members.fetch(
+                    interaction.user.id
+                );
 
-} catch(err){
 
+            }catch(err){
 
-return interaction.reply({
+                return interaction.reply({
 
-content:"❌ Could not find VVLL server.",
+                    content:
+                    "❌ You must join the VVLL Discord server before accepting this contract.",
 
-ephemeral:true
+                    ephemeral:true
 
-});
+                });
 
+            }
 
-}
+        }
 
 
 
-let member;
+        const role =
+        guild.roles.cache.get(
+            team.roleId
+        );
 
 
-let member = guild.members.cache.get(
-    interaction.user.id
-);
 
+        if(role){
 
-if(!member){
+            await member.roles.add(role)
+            .catch(()=>{});
 
-try {
+        }
 
-    member = await guild.members.fetch(
-        interaction.user.id
-    );
 
-} catch(err){
 
-    return interaction.reply({
-        content:
-        "❌ You must join the VVLL Discord server before accepting this contract.",
-        ephemeral:true
-    });
+        db.players[interaction.user.id] = {
 
-}
+            team: team.name,
 
-}
+            roleId: team.roleId
 
+        };
 
 
-let role =
-guild.roles.cache.get(
-team.roleId
-);
 
+        saveDB(db);
 
 
-if(role){
 
-await member.roles.add(role)
-.catch(()=>{});
+        await interaction.update({
 
-}
+            content:
+            `✅ You signed with **${team.name}**.`,
 
+            embeds:[],
 
+            components:[]
 
-db.players[interaction.user.id]={
+        });
 
-team:team.name,
 
-roleId:team.roleId
 
-};
+        let manager;
 
 
+        try{
 
-saveDB(db);
+            manager =
+            await guild.members.fetch(
+                team.managerId
+            );
 
+        }catch(err){
 
+            manager = null;
 
-await interaction.update({
+        }
 
-content:
-`✅ You signed with **${team.name}**.`,
 
-embeds:[],
 
-components:[]
+        if(manager){
 
-});
-// ====================
-// VVLL BUTTONS 2/2
-// PASTE UNDER 1/2
-// ====================
+            manager.send({
 
+                content:
+                `🏆 **Contract Accepted**\n\n`+
+                `${interaction.user} signed with **${team.name}**.`
 
-let manager;
+            }).catch(()=>{});
 
+        }
 
-try {
 
+    }
 
-manager =
-await guild.members.fetch(
-team.managerId
-);
 
 
-}catch(err){
 
-manager = null;
+    // =====================
+    // DECLINE CONTRACT
+    // =====================
 
-}
 
+    if(id.startsWith("decline_")){
 
 
-if(manager){
+        await interaction.update({
 
-manager.send({
+            content:
+            `❌ You declined the contract from **${team.name}**.`,
 
-content:
-`🏆 **Contract Accepted**\n\n`+
-`${interaction.user} signed with **${team.name}**.`
+            embeds:[],
 
-}).catch(()=>{});
+            components:[]
 
-}
+        });
 
 
 
-}
+        let guild;
 
 
 
+        try{
 
-// ====================
-// DECLINE CONTRACT
-// ====================
+            guild =
+            await interaction.client.guilds.fetch(
+                team.guildId
+            );
 
 
-if(id.startsWith("decline_")){
+        }catch(err){
 
+            return;
 
-await interaction.update({
+        }
 
-content:
-`❌ You declined the contract from **${team.name}**.`,
 
-embeds:[],
 
-components:[]
 
-});
+        let manager;
 
 
+        try{
 
-let guild;
+            manager =
+            await guild.members.fetch(
+                team.managerId
+            );
 
 
+        }catch(err){
 
-try {
+            manager = null;
 
+        }
 
-guild =
-await interaction.client.guilds.fetch(
-team.guildId
-);
 
 
 
-}catch(err){
+        if(manager){
 
-return;
+            manager.send({
 
-}
+                content:
+                `❌ ${interaction.user} declined the contract from **${team.name}**.`
 
+            }).catch(()=>{});
 
+        }
 
 
-let manager;
-
-
-try {
-
-
-manager =
-await guild.members.fetch(
-team.managerId
-);
-
-
-}catch(err){
-
-manager = null;
-
-}
-
-
-
-if(manager){
-
-
-manager.send({
-
-content:
-`❌ ${interaction.user} declined the contract from **${team.name}**.`
-
-}).catch(()=>{});
-
-
-}
-
-
-
-}
-
+    }
 
 
 };
-
-
-// ====================
-// END OF VVLL BUTTONS
-// ====================
