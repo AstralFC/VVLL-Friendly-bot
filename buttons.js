@@ -239,10 +239,7 @@ module.exports = async (interaction)=>{
     }catch(error){
 
 
-        console.log(
-            "VVLL BUTTON ERROR:",
-            error.stack
-        );
+console.log("VVLL BUTTON ERROR FULL:", error);
 
 
 
