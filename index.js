@@ -6,7 +6,13 @@ const {
     Routes
 } = require("discord.js");
 
-const config = require("./config.json");
+const config = {
+    token: process.env.TOKEN,
+    clientId: process.env.CLIENT_ID,
+    guildId: process.env.GUILD_ID,
+    ownerId: process.env.OWNER_ID,
+    coOwnerId: process.env.CO_OWNER_ID
+};
 const commands = require("./commands");
 const buttonHandler = require("./buttons");
 
