@@ -10,12 +10,13 @@ const {
 
 const fs = require("fs");
 
+
 const dbFile = "./database.json";
 
 
-function loadDB() {
+function loadDB(){
 
-    if (!fs.existsSync(dbFile)) {
+    if(!fs.existsSync(dbFile)){
 
         fs.writeFileSync(
             dbFile,
@@ -23,26 +24,38 @@ function loadDB() {
                 teams:{},
                 players:{},
                 games:{}
-            }, null, 4)
+            },null,4)
         );
 
     }
 
-    return JSON.parse(
+
+    let db = JSON.parse(
         fs.readFileSync(dbFile)
     );
 
+
+    // DATABASE UPGRADER
+    if(!db.teams) db.teams={};
+    if(!db.players) db.players={};
+    if(!db.games) db.games={};
+
+
+    return db;
+
 }
 
 
-function saveDB(data){
+
+function saveDB(db){
 
     fs.writeFileSync(
         dbFile,
-        JSON.stringify(data,null,4)
+        JSON.stringify(db,null,4)
     );
 
 }
+
 
 
 function isOwner(id){
@@ -60,59 +73,92 @@ module.exports = [
 
 
 
+// ====================
 // CREATE TEAM
+// ====================
+
 
 {
+
 data:
+
 new SlashCommandBuilder()
+
 .setName("create-team")
+
 .setDescription("Create a VVLL team")
 
 .addRoleOption(option =>
+
 option
+
 .setName("team_role")
+
 .setDescription("Team role")
+
 .setRequired(true)
+
 )
 
 .addUserOption(option =>
+
 option
+
 .setName("manager")
+
 .setDescription("Team manager")
+
 .setRequired(true)
+
 ),
+
 
 
 async execute(interaction){
 
 
+
 if(!isOwner(interaction.user.id)){
 
+
 return interaction.reply({
+
 content:"❌ Owner only.",
+
 ephemeral:true
+
 });
+
 
 }
 
 
-const role =
+
+let role =
 interaction.options.getRole("team_role");
 
 
-const manager =
+
+let manager =
 interaction.options.getUser("manager");
+
 
 
 let db = loadDB();
 
 
+
 if(db.teams[role.id]){
 
+
 return interaction.reply({
+
 content:"❌ Team already exists.",
+
 ephemeral:true
+
 });
+
 
 }
 
@@ -120,9 +166,17 @@ ephemeral:true
 
 db.teams[role.id]={
 
+
 name:role.name,
+
 roleId:role.id,
-managerId:manager.id
+
+managerId:manager.id,
+
+guildId:interaction.guild.id,
+
+players:[]
+
 
 };
 
@@ -134,6 +188,7 @@ saveDB(db);
 
 interaction.reply({
 
+
 embeds:[
 
 new EmbedBuilder()
@@ -143,63 +198,86 @@ new EmbedBuilder()
 .setTitle("🏆 VVLL Team Created")
 
 .setDescription(
+
 `🏟️ Team: **${role.name}**\n`+
+
 `👔 Manager: ${manager}`
+
 )
 
 .setFooter({
+
 text:"VVLL Bot | VVLL | NA | S1"
+
 })
 
 ]
+
 
 });
 
 
 }
+
 
 },
 
 
 
 
+
+// ====================
 // DELETE TEAM
+// ====================
 
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("delete-team")
 
 .setDescription("Delete a VVLL team")
 
-
 .addRoleOption(option =>
+
 option
+
 .setName("team")
+
 .setDescription("Team role")
+
 .setRequired(true)
+
 ),
+
 
 
 async execute(interaction){
 
 
+
 if(!isOwner(interaction.user.id)){
 
+
 return interaction.reply({
+
 content:"❌ Owner only.",
+
 ephemeral:true
+
 });
+
 
 }
 
 
 
-const role =
+let role =
 interaction.options.getRole("team");
+
 
 
 let db = loadDB();
@@ -208,10 +286,15 @@ let db = loadDB();
 
 if(!db.teams[role.id]){
 
+
 return interaction.reply({
+
 content:"❌ Team not found.",
+
 ephemeral:true
+
 });
+
 
 }
 
@@ -221,13 +304,15 @@ delete db.teams[role.id];
 
 
 
-for(let player in db.players){
+for(let id in db.players){
 
-if(db.players[player].roleId === role.id){
 
-delete db.players[player];
+if(db.players[id].roleId === role.id){
+
+delete db.players[id];
 
 }
+
 
 }
 
@@ -238,36 +323,45 @@ saveDB(db);
 
 
 interaction.reply(
+
 `🗑️ Deleted **${role.name}**`
+
 );
 
 
-
 }
+
 
 },
 
 
 
 
+// ====================
 // TEAM ROSTER
+// ====================
 
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("team-roster")
 
 .setDescription("View team roster")
 
-
 .addRoleOption(option =>
+
 option
+
 .setName("team")
+
 .setDescription("Team")
+
 .setRequired(true)
+
 ),
 
 
@@ -275,11 +369,14 @@ option
 async execute(interaction){
 
 
+
 let role =
 interaction.options.getRole("team");
 
 
+
 let db = loadDB();
+
 
 
 let team =
@@ -289,25 +386,32 @@ db.teams[role.id];
 
 if(!team){
 
+
 return interaction.reply({
+
 content:"❌ Team not found.",
+
 ephemeral:true
+
 });
+
 
 }
 
 
 
-let players =
-Object.keys(db.players)
+let players = Object.keys(db.players)
 
 .filter(id =>
+
 db.players[id].roleId === role.id
+
 );
 
 
 
 interaction.reply({
+
 
 embeds:[
 
@@ -324,45 +428,57 @@ new EmbedBuilder()
 `👥 Players:\n`+
 
 (
+
 players.length
+
 ?
-players.map(p=>`<@${p}>`).join("\n")
+
+players.map(x=>`<@${x}>`).join("\n")
+
 :
+
 "No players"
+
 )
 
 )
+
 
 ]
 
 });
 
+
 }
+
 
 },
 
 
-
 // ====================
 // STOP HERE
-// PASTE COMMANDS 2/2 UNDER THIS LINE
+// PASTE VVLL COMMANDS 2/2 UNDER THIS LINE
 // ====================
 // ====================
 // VVLL COMMANDS 2/2
-// PASTE UNDER THE LINE ABOVE
+// PASTE UNDER 1/2
 // ====================
 
 
+// ====================
 // LEAGUE ROSTER
+// ====================
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("league-roster")
 
 .setDescription("View all VVLL teams"),
+
 
 
 async execute(interaction){
@@ -400,7 +516,7 @@ teams.map(team =>
 
 :
 
-"No teams created yet."
+"No teams created."
 
 )
 
@@ -422,17 +538,21 @@ text:"VVLL Bot | VVLL | NA | S1"
 
 
 
+
+// ====================
 // SIGN PLAYER
+// ====================
 
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("sign")
 
-.setDescription("Sign a player")
+.setDescription("Send a player a contract")
 
 .addUserOption(option =>
 
@@ -451,6 +571,7 @@ option
 async execute(interaction){
 
 
+
 let db = loadDB();
 
 
@@ -467,24 +588,30 @@ t.managerId === interaction.user.id
 
 if(!team){
 
+
 return interaction.reply({
 
-content:"❌ You are not a team manager.",
+content:"❌ You are not a manager.",
 
 ephemeral:true
 
 });
+
 
 }
 
 
 
 let player =
+
 interaction.options.getUser("player");
 
 
 
+
+
 if(db.players[player.id]){
+
 
 return interaction.reply({
 
@@ -494,7 +621,22 @@ ephemeral:true
 
 });
 
+
 }
+
+
+
+
+
+// SAVE SERVER FOR DM BUTTONS
+
+team.guildId = interaction.guild.id;
+
+db.teams[team.roleId] = team;
+
+saveDB(db);
+
+
 
 
 
@@ -508,13 +650,13 @@ new EmbedBuilder()
 
 .setDescription(
 
-`A team has offered you a contract.\n\n`+
+`You received a contract offer.\n\n`+
 
 `🏟️ Team: **${team.name}**\n`+
 
-`👔 Manager: <@${interaction.user.id}>\n\n`+
+`👔 Manager: ${interaction.user}\n\n`+
 
-`Do you accept?`
+`Accept or decline below.`
 
 )
 
@@ -523,6 +665,8 @@ new EmbedBuilder()
 text:"Vx Vnilla Landon League"
 
 });
+
+
 
 
 
@@ -568,17 +712,32 @@ custom_id:`decline_${team.roleId}`
 
 ]
 
+}).catch(()=>{
+
+return interaction.reply({
+
+content:"❌ I cannot DM this player.",
+
+ephemeral:true
+
 });
+
+});
+
 
 
 
 interaction.reply({
 
-content:`✅ Contract sent to ${player}.`,
+content:
+
+`✅ Contract sent to ${player}.`,
 
 ephemeral:true
 
 });
+
+
 
 }
 
@@ -588,17 +747,20 @@ ephemeral:true
 
 
 
+// ====================
 // RELEASE PLAYER
+// ====================
 
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("release-player")
 
-.setDescription("Release player")
+.setDescription("Release player from your team")
 
 .addUserOption(option =>
 
@@ -617,6 +779,7 @@ option
 async execute(interaction){
 
 
+
 let db = loadDB();
 
 
@@ -633,6 +796,7 @@ t.managerId === interaction.user.id
 
 if(!team){
 
+
 return interaction.reply({
 
 content:"❌ You are not a manager.",
@@ -641,7 +805,10 @@ ephemeral:true
 
 });
 
+
 }
+
+
 
 
 
@@ -651,17 +818,29 @@ interaction.options.getUser("player");
 
 
 
-if(!db.players[player.id]){
+
+
+if(
+
+!db.players[player.id] ||
+
+db.players[player.id].roleId !== team.roleId
+
+){
+
 
 return interaction.reply({
 
-content:"❌ Player not signed.",
+content:"❌ Player is not on your team.",
 
 ephemeral:true
 
 });
 
+
 }
+
+
 
 
 
@@ -672,14 +851,18 @@ saveDB(db);
 
 
 
+
+
 interaction.reply(
 
-`✅ Released ${player}.`
+`✅ Released ${player} from **${team.name}**.`
 
 );
 
 
+
 }
+
 
 },
 
@@ -687,17 +870,20 @@ interaction.reply(
 
 
 
+// ====================
 // TRANSFER MANAGER
+// ====================
 
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("team-transfer-manager")
 
-.setDescription("Transfer manager")
+.setDescription("Transfer team manager")
 
 .addRoleOption(option =>
 
@@ -728,7 +914,9 @@ option
 async execute(interaction){
 
 
+
 if(!isOwner(interaction.user.id)){
+
 
 return interaction.reply({
 
@@ -738,15 +926,20 @@ ephemeral:true
 
 });
 
+
 }
 
 
 
+
 let role =
+
 interaction.options.getRole("team");
 
 
+
 let manager =
+
 interaction.options.getUser("new_manager");
 
 
@@ -757,6 +950,7 @@ let db = loadDB();
 
 if(!db.teams[role.id]){
 
+
 return interaction.reply({
 
 content:"❌ Team not found.",
@@ -765,12 +959,14 @@ ephemeral:true
 
 });
 
+
 }
 
 
 
-db.teams[role.id].managerId =
-manager.id;
+
+
+db.teams[role.id].managerId = manager.id;
 
 
 
@@ -778,32 +974,36 @@ saveDB(db);
 
 
 
+
 interaction.reply(
 
-`✅ ${role.name}'s manager is now ${manager}.`
+`✅ ${role.name}'s new manager is ${manager}.`
 
 );
 
 
 }
 
+
 },
 
 
 
 
+// ====================
 // CREATE GAME
+// ====================
 
 
 {
 
 data:
+
 new SlashCommandBuilder()
 
 .setName("create-game")
 
-.setDescription("Create VVLL game")
-
+.setDescription("Create a VVLL game")
 
 .addRoleOption(option =>
 
@@ -835,7 +1035,7 @@ option
 
 .setName("time")
 
-.setDescription("Time")
+.setDescription("Match time")
 
 .setRequired(true)
 
@@ -847,7 +1047,7 @@ option
 
 .setName("format")
 
-.setDescription("4v4-11v11")
+.setDescription("4v4 - 11v11")
 
 .setRequired(true)
 
@@ -859,11 +1059,12 @@ option
 
 .setName("stage")
 
-.setDescription("Stage")
+.setDescription("Last 8 / Last 4 / Finals")
 
 .setRequired(true)
 
 ),
+
 
 
 
@@ -873,6 +1074,7 @@ async execute(interaction){
 
 if(!isOwner(interaction.user.id)){
 
+
 return interaction.reply({
 
 content:"❌ Owner only.",
@@ -880,6 +1082,7 @@ content:"❌ Owner only.",
 ephemeral:true
 
 });
+
 
 }
 
@@ -891,7 +1094,7 @@ new EmbedBuilder()
 
 .setColor("#ff4f8b")
 
-.setTitle("🏆 VVLL Official Match")
+.setTitle("🏆 VVLL Match")
 
 .setDescription(
 
@@ -907,13 +1110,7 @@ new EmbedBuilder()
 
 `🏅 ${interaction.options.getString("stage")}`
 
-)
-
-.setFooter({
-
-text:"VVLL Bot | VVLL | NA | S1"
-
-});
+);
 
 
 
@@ -926,6 +1123,7 @@ embeds:[embed]
 
 }
 
+
 }
 
 
@@ -933,5 +1131,5 @@ embeds:[embed]
 
 
 // ====================
-// END OF VVLL COMMANDS
+// END VVLL COMMANDS
 // ====================
