@@ -1,6 +1,6 @@
 // ===============================
 // VVLL BOT COMMANDS
-// PART 1/4
+// CLEAN VERSION 1/4
 // ===============================
 
 const {
@@ -14,8 +14,8 @@ const fs = require("fs");
 const DB_FILE = "./database.json";
 
 
-const OWNER_ID = "PUT_YOUR_OWNER_ID_HERE";
-
+// CHANGE THIS TO YOUR DISCORD USER ID
+const OWNER_ID = "YOUR_ID_HERE";
 
 
 function loadDB(){
@@ -34,7 +34,6 @@ function loadDB(){
         };
 
     }
-
 
     return JSON.parse(
         fs.readFileSync(DB_FILE,"utf8")
@@ -63,7 +62,7 @@ function isOwner(id){
 
 
 
-function createPlayer(db,user){
+function makePlayer(db,user){
 
     if(!db.players[user.id]){
 
@@ -88,15 +87,13 @@ function createPlayer(db,user){
 
 
 
-
 module.exports = {
-
 
 data:[
 
 
 // ===============================
-// STATS COMMANDS
+// STATS
 // ===============================
 
 
@@ -158,6 +155,15 @@ option
 
 
 
+// ===============================
+// PASTE 2/4 UNDER THIS LINE
+// ===============================
+// ===============================
+// TEAM COMMANDS
+// CLEAN VERSION 2/4
+// ===============================
+
+
 new SlashCommandBuilder()
 
 .setName("team-stats")
@@ -167,25 +173,17 @@ new SlashCommandBuilder()
 .addStringOption(option =>
 option
 .setName("team")
-.setDescription("Team")
+.setDescription("Team name")
 .setRequired(true)
 ),
 
-
-
-// ===============================
-// PUT PART 2/4 UNDER THIS LINE
-// ===============================
-// ===============================
-// COMMAND LIST PART 2/4
-// ===============================
 
 
 new SlashCommandBuilder()
 
 .setName("standings")
 
-.setDescription("View league standings"),
+.setDescription("View VVLL standings"),
 
 
 
@@ -193,7 +191,7 @@ new SlashCommandBuilder()
 
 .setName("create-team")
 
-.setDescription("Create a VVLL team")
+.setDescription("Create a team")
 
 .addStringOption(option =>
 option
@@ -215,7 +213,7 @@ new SlashCommandBuilder()
 
 .setName("delete-team")
 
-.setDescription("Delete a VVLL team")
+.setDescription("Delete a team")
 
 .addStringOption(option =>
 option
@@ -230,7 +228,7 @@ new SlashCommandBuilder()
 
 .setName("sign")
 
-.setDescription("Sign a player")
+.setDescription("Sign player")
 
 .addUserOption(option =>
 option
@@ -252,7 +250,7 @@ new SlashCommandBuilder()
 
 .setName("release-player")
 
-.setDescription("Release a player")
+.setDescription("Release player")
 
 .addUserOption(option =>
 option
@@ -261,6 +259,15 @@ option
 .setRequired(true)
 ),
 
+
+
+// ===============================
+// PASTE 3/4 UNDER THIS LINE
+// ===============================
+// ===============================
+// MORE COMMANDS + START EXECUTE
+// CLEAN VERSION 3/4
+// ===============================
 
 
 new SlashCommandBuilder()
@@ -272,7 +279,7 @@ new SlashCommandBuilder()
 .addStringOption(option =>
 option
 .setName("team")
-.setDescription("Team")
+.setDescription("Team name")
 .setRequired(true)
 ),
 
@@ -290,23 +297,25 @@ new SlashCommandBuilder()
 
 .setName("reset-league")
 
-.setDescription("Reset league stats"),
+.setDescription("Reset league"),
 
 
 
-// ===============================
-// PUT PART 3/4 UNDER THIS LINE
-// ===============================
-// ===============================
-// EXECUTE LOGIC PART 1/2
-// ===============================
+],
+
 
 
 async execute(interaction){
 
 
+
 const db = loadDB();
 
+
+
+// ===============================
+// STATS COMMAND
+// ===============================
 
 
 if(interaction.commandName === "stats"){
@@ -315,8 +324,11 @@ if(interaction.commandName === "stats"){
     if(!isOwner(interaction.user.id)){
 
         return interaction.reply({
+
             content:"❌ Owner only.",
+
             ephemeral:true
+
         });
 
     }
@@ -326,7 +338,7 @@ if(interaction.commandName === "stats"){
     interaction.options.getUser("player");
 
 
-    createPlayer(db,user);
+    makePlayer(db,user);
 
 
     db.players[user.id].stats.goals +=
@@ -351,18 +363,19 @@ if(interaction.commandName === "stats"){
     return interaction.reply({
 
         content:
-`✅ Updated ${user}
-
-⚽ Goals: ${db.players[user.id].stats.goals}
-🎯 Assists: ${db.players[user.id].stats.assists}
-🧤 Saves: ${db.players[user.id].stats.saves}
-🧱 Blocks: ${db.players[user.id].stats.blocks}`
+        `✅ Stats updated for ${user}`
 
     });
+
 
 }
 
 
+
+
+// ===============================
+// PLAYER STATS
+// ===============================
 
 
 if(interaction.commandName === "player-stats"){
@@ -372,18 +385,11 @@ if(interaction.commandName === "player-stats"){
     interaction.options.getUser("player");
 
 
-    const player =
-    db.players[user.id];
+    makePlayer(db,user);
 
 
-    if(!player){
-
-        return interaction.reply({
-            content:"❌ No stats found.",
-            ephemeral:true
-        });
-
-    }
+    const s =
+    db.players[user.id].stats;
 
 
     return interaction.reply({
@@ -392,16 +398,14 @@ if(interaction.commandName === "player-stats"){
 
             new EmbedBuilder()
 
-            .setTitle(`📊 ${player.name}`)
+            .setTitle(`📊 ${user.username}`)
 
             .setDescription(
 `
-⚽ Goals: ${player.stats.goals}
-🎯 Assists: ${player.stats.assists}
-🧤 Saves: ${player.stats.saves}
-🧱 Blocks: ${player.stats.blocks}
-
-🏟 Team: ${player.team || "Free Agent"}
+⚽ Goals: ${s.goals}
+🎯 Assists: ${s.assists}
+🧤 Saves: ${s.saves}
+🧱 Blocks: ${s.blocks}
 `
             )
 
@@ -409,8 +413,19 @@ if(interaction.commandName === "player-stats"){
 
     });
 
+
 }
 
+
+
+
+// ===============================
+// PASTE 4/4 UNDER THIS LINE
+// ===============================
+// ===============================
+// FINAL COMMAND LOGIC
+// CLEAN VERSION 4/4
+// ===============================
 
 
 
@@ -435,19 +450,9 @@ if(interaction.commandName === "create-team"){
     interaction.options.getUser("manager");
 
 
-    if(db.teams[name]){
+    db.teams[name] = {
 
-        return interaction.reply({
-            content:"❌ Team already exists.",
-            ephemeral:true
-        });
-
-    }
-
-
-    db.teams[name]={
-
-        manager:manager.id,
+        manager: manager.id,
 
         players:[]
 
@@ -460,22 +465,13 @@ if(interaction.commandName === "create-team"){
     return interaction.reply({
 
         content:
-        `✅ Created ${name}`
+        `✅ Created team ${name}`
 
     });
-
 
 }
 
 
-
-
-// ===============================
-// PUT PART 4/4 UNDER THIS LINE
-// ===============================
-// ===============================
-// EXECUTE LOGIC PART 2/2
-// ===============================
 
 
 if(interaction.commandName === "sign"){
@@ -499,17 +495,13 @@ if(interaction.commandName === "sign"){
     }
 
 
-    createPlayer(db,player);
+    makePlayer(db,player);
 
 
     db.players[player.id].team = team;
 
 
-    if(!db.teams[team].players.includes(player.id)){
-
-        db.teams[team].players.push(player.id);
-
-    }
+    db.teams[team].players.push(player.id);
 
 
     saveDB(db);
@@ -534,7 +526,7 @@ if(interaction.commandName === "release-player"){
     interaction.options.getUser("player");
 
 
-    createPlayer(db,player);
+    makePlayer(db,player);
 
 
     db.players[player.id].team = null;
@@ -570,11 +562,9 @@ if(interaction.commandName === "team-stats"){
 
     if(db.teams[team]){
 
-
         db.teams[team].players.forEach(id=>{
 
-
-            let s =
+            const s =
             db.players[id]?.stats;
 
 
@@ -587,9 +577,7 @@ if(interaction.commandName === "team-stats"){
 
             }
 
-
         });
-
 
     }
 
@@ -599,13 +587,12 @@ if(interaction.commandName === "team-stats"){
         content:
 `📊 ${team}
 
-⚽ Goals: ${goals}
-🎯 Assists: ${assists}
-🧤 Saves: ${saves}
-🧱 Blocks: ${blocks}`
+⚽ ${goals}
+🎯 ${assists}
+🧤 ${saves}
+🧱 ${blocks}`
 
     });
-
 
 }
 
@@ -619,14 +606,14 @@ if(interaction.commandName === "team-roster"){
     interaction.options.getString("team");
 
 
-    let list="";
+    let text="";
 
 
     if(db.teams[team]){
 
         db.teams[team].players.forEach(id=>{
 
-            list +=
+            text +=
             `• ${db.players[id]?.name}\n`;
 
         });
@@ -637,7 +624,7 @@ if(interaction.commandName === "team-roster"){
     return interaction.reply({
 
         content:
-        `🏟 ${team}\n${list || "No players"}`
+        text || "No players"
 
     });
 
@@ -663,7 +650,7 @@ if(interaction.commandName === "league-roster"){
     return interaction.reply({
 
         content:
-        text || "No teams."
+        text || "No teams"
 
     });
 
@@ -678,7 +665,7 @@ if(interaction.commandName === "standings"){
     return interaction.reply({
 
         content:
-        "🏆 VVLL Standings\nNo games recorded yet."
+        "🏆 VVLL Standings coming soon."
 
     });
 
@@ -704,8 +691,6 @@ if(interaction.commandName === "reset-league"){
 
     db.teams={};
 
-    db.standings={};
-
 
     saveDB(db);
 
@@ -722,7 +707,4 @@ if(interaction.commandName === "reset-league"){
 
 }
 
-
-// ===============================
-// END OF COMMANDS
-// ===============================
+};
