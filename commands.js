@@ -1,6 +1,6 @@
 // ===============================
 // VVLL BOT COMMANDS
-// CLEAN VERSION 1/4
+// FIXED ARRAY VERSION 1/4
 // ===============================
 
 const {
@@ -13,34 +13,16 @@ const fs = require("fs");
 
 const DB_FILE = "./database.json";
 
-
-// CHANGE THIS TO YOUR DISCORD USER ID
 const OWNER_ID = "YOUR_ID_HERE";
 
 
 function loadDB(){
-
-    if(!fs.existsSync(DB_FILE)){
-
-        return {
-            version:2,
-            teams:{},
-            players:{},
-            games:{},
-            standings:{},
-            settings:{
-                season:1
-            }
-        };
-
-    }
 
     return JSON.parse(
         fs.readFileSync(DB_FILE,"utf8")
     );
 
 }
-
 
 
 function saveDB(db){
@@ -53,7 +35,6 @@ function saveDB(db){
 }
 
 
-
 function isOwner(id){
 
     return id === OWNER_ID;
@@ -61,8 +42,7 @@ function isOwner(id){
 }
 
 
-
-function makePlayer(db,user){
+function createPlayer(db,user){
 
     if(!db.players[user.id]){
 
@@ -87,15 +67,12 @@ function makePlayer(db,user){
 
 
 
-module.exports = {
-
-data:[
+module.exports = [
 
 
-// ===============================
-// STATS
-// ===============================
+{
 
+data:
 
 new SlashCommandBuilder()
 
@@ -140,6 +117,81 @@ option
 
 
 
+async execute(interaction){
+
+
+const db = loadDB();
+
+
+if(interaction.commandName === "stats"){
+
+
+if(!isOwner(interaction.user.id)){
+
+return interaction.reply({
+
+content:"❌ Owner only",
+
+ephemeral:true
+
+});
+
+}
+
+
+const player =
+interaction.options.getUser("player");
+
+
+createPlayer(db,player);
+
+
+db.players[player.id].stats.goals +=
+interaction.options.getInteger("goals");
+
+
+db.players[player.id].stats.assists +=
+interaction.options.getInteger("assists");
+
+
+db.players[player.id].stats.saves +=
+interaction.options.getInteger("saves");
+
+
+db.players[player.id].stats.blocks +=
+interaction.options.getInteger("blocks");
+
+
+saveDB(db);
+
+
+return interaction.reply({
+
+content:
+`✅ Updated stats for ${player}`
+
+});
+
+
+}
+
+
+}
+
+
+}
+
+// ===============================
+// VVLL COMMANDS
+// FIXED ARRAY VERSION 2/4
+// ===============================
+
+
+{
+
+
+data:
+
 new SlashCommandBuilder()
 
 .setName("player-stats")
@@ -154,44 +206,72 @@ option
 ),
 
 
-
-// ===============================
-// PASTE 2/4 UNDER THIS LINE
-// ===============================
-// ===============================
-// TEAM COMMANDS
-// CLEAN VERSION 2/4
-// ===============================
+async execute(interaction){
 
 
-new SlashCommandBuilder()
-
-.setName("team-stats")
-
-.setDescription("View team stats")
-
-.addStringOption(option =>
-option
-.setName("team")
-.setDescription("Team name")
-.setRequired(true)
-),
+const db = loadDB();
 
 
-
-new SlashCommandBuilder()
-
-.setName("standings")
-
-.setDescription("View VVLL standings"),
+const player =
+interaction.options.getUser("player");
 
 
+if(!db.players[player.id]){
+
+return interaction.reply({
+
+content:"❌ No stats found.",
+
+ephemeral:true
+
+});
+
+}
+
+
+const s =
+db.players[player.id].stats;
+
+
+return interaction.reply({
+
+embeds:[
+
+new EmbedBuilder()
+
+.setTitle(`📊 ${player.username}`)
+
+.setDescription(
+`
+⚽ Goals: ${s.goals}
+🎯 Assists: ${s.assists}
+🧤 Saves: ${s.saves}
+🧱 Blocks: ${s.blocks}
+`
+)
+
+]
+
+});
+
+
+}
+
+
+},
+
+
+
+{
+
+
+data:
 
 new SlashCommandBuilder()
 
 .setName("create-team")
 
-.setDescription("Create a team")
+.setDescription("Create VVLL team")
 
 .addStringOption(option =>
 option
@@ -203,32 +283,76 @@ option
 .addUserOption(option =>
 option
 .setName("manager")
-.setDescription("Team manager")
+.setDescription("Manager")
 .setRequired(true)
 ),
 
 
-
-new SlashCommandBuilder()
-
-.setName("delete-team")
-
-.setDescription("Delete a team")
-
-.addStringOption(option =>
-option
-.setName("team")
-.setDescription("Team name")
-.setRequired(true)
-),
+async execute(interaction){
 
 
+const db = loadDB();
+
+
+if(!isOwner(interaction.user.id)){
+
+return interaction.reply({
+
+content:"❌ Owner only",
+
+ephemeral:true
+
+});
+
+}
+
+
+const name =
+interaction.options.getString("name");
+
+
+const manager =
+interaction.options.getUser("manager");
+
+
+db.teams[name]={
+
+manager:manager.id,
+
+players:[]
+
+};
+
+
+saveDB(db);
+
+
+return interaction.reply({
+
+content:
+`✅ Created ${name}`
+
+});
+
+
+}
+
+// ===============================
+// VVLL COMMANDS
+// FIXED ARRAY VERSION 3/4
+// ===============================
+
+
+{
+
+
+data:
 
 new SlashCommandBuilder()
 
 .setName("sign")
 
-.setDescription("Sign player")
+.setDescription("Sign a player to a team")
 
 .addUserOption(option =>
 option
@@ -246,29 +370,195 @@ option
 
 
 
+async execute(interaction){
+
+
+const db = loadDB();
+
+
+const player =
+interaction.options.getUser("player");
+
+
+const team =
+interaction.options.getString("team");
+
+
+if(!db.teams[team]){
+
+return interaction.reply({
+
+content:"❌ Team does not exist.",
+
+ephemeral:true
+
+});
+
+}
+
+
+createPlayer(db,player);
+
+
+db.players[player.id].team = team;
+
+
+if(!db.teams[team].players.includes(player.id)){
+
+db.teams[team].players.push(player.id);
+
+}
+
+
+saveDB(db);
+
+
+return interaction.reply({
+
+content:
+`✅ ${player} signed to ${team}`
+
+});
+
+
+}
+
+
+},
+
+
+
+
+{
+
+
+data:
+
 new SlashCommandBuilder()
 
-.setName("release-player")
+.setName("team-stats")
 
-.setDescription("Release player")
+.setDescription("View team stats")
 
-.addUserOption(option =>
+.addStringOption(option =>
 option
-.setName("player")
-.setDescription("Player")
+.setName("team")
+.setDescription("Team")
 .setRequired(true)
 ),
 
 
 
+async execute(interaction){
+
+
+const db = loadDB();
+
+
+const team =
+interaction.options.getString("team");
+
+
+if(!db.teams[team]){
+
+return interaction.reply({
+
+content:"❌ Team not found.",
+
+ephemeral:true
+
+});
+
+}
+
+
+let goals=0;
+let assists=0;
+let saves=0;
+let blocks=0;
+
+
+
+db.teams[team].players.forEach(id=>{
+
+
+const s =
+db.players[id]?.stats;
+
+
+if(s){
+
+goals += s.goals;
+assists += s.assists;
+saves += s.saves;
+blocks += s.blocks;
+
+}
+
+
+});
+
+
+
+return interaction.reply({
+
+content:
+`
+📊 ${team}
+
+⚽ Goals: ${goals}
+🎯 Assists: ${assists}
+🧤 Saves: ${saves}
+🧱 Blocks: ${blocks}
+`
+
+});
+
+
+}
+
 // ===============================
-// PASTE 3/4 UNDER THIS LINE
-// ===============================
-// ===============================
-// MORE COMMANDS + START EXECUTE
-// CLEAN VERSION 3/4
+// VVLL COMMANDS
+// FIXED ARRAY VERSION 4/4
 // ===============================
 
+
+{
+
+
+data:
+
+new SlashCommandBuilder()
+
+.setName("standings")
+
+.setDescription("View VVLL standings"),
+
+
+
+async execute(interaction){
+
+
+return interaction.reply({
+
+content:
+"🏆 VVLL Standings\nNo games recorded yet."
+
+});
+
+
+}
+
+
+},
+
+
+
+
+{
+
+
+data:
 
 new SlashCommandBuilder()
 
@@ -279,432 +569,116 @@ new SlashCommandBuilder()
 .addStringOption(option =>
 option
 .setName("team")
-.setDescription("Team name")
+.setDescription("Team")
 .setRequired(true)
 ),
-
-
-
-new SlashCommandBuilder()
-
-.setName("league-roster")
-
-.setDescription("View all teams"),
-
-
-
-new SlashCommandBuilder()
-
-.setName("reset-league")
-
-.setDescription("Reset league"),
-
-
-
-],
 
 
 
 async execute(interaction){
 
 
+const db = loadDB();
+
+
+const team =
+interaction.options.getString("team");
+
+
+if(!db.teams[team]){
+
+return interaction.reply({
+
+content:"❌ Team not found.",
+
+ephemeral:true
+
+});
+
+}
+
+
+let roster="";
+
+
+db.teams[team].players.forEach(id=>{
+
+roster +=
+`• ${db.players[id]?.name || "Unknown"}\n`;
+
+});
+
+
+return interaction.reply({
+
+content:
+`🏟️ ${team}\n${roster || "No players"}`
+
+});
+
+
+}
+
+
+},
+
+
+
+
+{
+
+
+data:
+
+new SlashCommandBuilder()
+
+.setName("reset-league")
+
+.setDescription("Reset VVLL league"),
+
+
+
+async execute(interaction){
+
 
 const db = loadDB();
 
 
+if(!isOwner(interaction.user.id)){
 
-// ===============================
-// STATS COMMAND
-// ===============================
+return interaction.reply({
 
+content:"❌ Owner only",
 
-if(interaction.commandName === "stats"){
+ephemeral:true
 
-
-    if(!isOwner(interaction.user.id)){
-
-        return interaction.reply({
-
-            content:"❌ Owner only.",
-
-            ephemeral:true
-
-        });
-
-    }
-
-
-    const user =
-    interaction.options.getUser("player");
-
-
-    makePlayer(db,user);
-
-
-    db.players[user.id].stats.goals +=
-    interaction.options.getInteger("goals");
-
-
-    db.players[user.id].stats.assists +=
-    interaction.options.getInteger("assists");
-
-
-    db.players[user.id].stats.saves +=
-    interaction.options.getInteger("saves");
-
-
-    db.players[user.id].stats.blocks +=
-    interaction.options.getInteger("blocks");
-
-
-    saveDB(db);
-
-
-    return interaction.reply({
-
-        content:
-        `✅ Stats updated for ${user}`
-
-    });
-
+});
 
 }
 
 
+db.players={};
 
+db.teams={};
 
-// ===============================
-// PLAYER STATS
-// ===============================
+db.standings={};
 
 
-if(interaction.commandName === "player-stats"){
+saveDB(db);
 
 
-    const user =
-    interaction.options.getUser("player");
+return interaction.reply({
 
+content:
+"✅ League reset."
 
-    makePlayer(db,user);
+});
 
-
-    const s =
-    db.players[user.id].stats;
-
-
-    return interaction.reply({
-
-        embeds:[
-
-            new EmbedBuilder()
-
-            .setTitle(`📊 ${user.username}`)
-
-            .setDescription(
-`
-⚽ Goals: ${s.goals}
-🎯 Assists: ${s.assists}
-🧤 Saves: ${s.saves}
-🧱 Blocks: ${s.blocks}
-`
-            )
-
-        ]
-
-    });
-
-
-}
-
-
-
-
-// ===============================
-// PASTE 4/4 UNDER THIS LINE
-// ===============================
-// ===============================
-// FINAL COMMAND LOGIC
-// CLEAN VERSION 4/4
-// ===============================
-
-
-
-if(interaction.commandName === "create-team"){
-
-
-    if(!isOwner(interaction.user.id)){
-
-        return interaction.reply({
-            content:"❌ Owner only.",
-            ephemeral:true
-        });
-
-    }
-
-
-    const name =
-    interaction.options.getString("name");
-
-
-    const manager =
-    interaction.options.getUser("manager");
-
-
-    db.teams[name] = {
-
-        manager: manager.id,
-
-        players:[]
-
-    };
-
-
-    saveDB(db);
-
-
-    return interaction.reply({
-
-        content:
-        `✅ Created team ${name}`
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "sign"){
-
-
-    const player =
-    interaction.options.getUser("player");
-
-
-    const team =
-    interaction.options.getString("team");
-
-
-    if(!db.teams[team]){
-
-        return interaction.reply({
-            content:"❌ Team not found.",
-            ephemeral:true
-        });
-
-    }
-
-
-    makePlayer(db,player);
-
-
-    db.players[player.id].team = team;
-
-
-    db.teams[team].players.push(player.id);
-
-
-    saveDB(db);
-
-
-    return interaction.reply({
-
-        content:
-        `✅ ${player} joined ${team}`
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "release-player"){
-
-
-    const player =
-    interaction.options.getUser("player");
-
-
-    makePlayer(db,player);
-
-
-    db.players[player.id].team = null;
-
-
-    saveDB(db);
-
-
-    return interaction.reply({
-
-        content:
-        `✅ Released ${player}`
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "team-stats"){
-
-
-    const team =
-    interaction.options.getString("team");
-
-
-    let goals=0;
-    let assists=0;
-    let saves=0;
-    let blocks=0;
-
-
-    if(db.teams[team]){
-
-        db.teams[team].players.forEach(id=>{
-
-            const s =
-            db.players[id]?.stats;
-
-
-            if(s){
-
-                goals += s.goals;
-                assists += s.assists;
-                saves += s.saves;
-                blocks += s.blocks;
-
-            }
-
-        });
-
-    }
-
-
-    return interaction.reply({
-
-        content:
-`📊 ${team}
-
-⚽ ${goals}
-🎯 ${assists}
-🧤 ${saves}
-🧱 ${blocks}`
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "team-roster"){
-
-
-    const team =
-    interaction.options.getString("team");
-
-
-    let text="";
-
-
-    if(db.teams[team]){
-
-        db.teams[team].players.forEach(id=>{
-
-            text +=
-            `• ${db.players[id]?.name}\n`;
-
-        });
-
-    }
-
-
-    return interaction.reply({
-
-        content:
-        text || "No players"
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "league-roster"){
-
-
-    let text="";
-
-
-    for(const team in db.teams){
-
-        text +=
-        `🏆 ${team}\n`;
-
-    }
-
-
-    return interaction.reply({
-
-        content:
-        text || "No teams"
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "standings"){
-
-
-    return interaction.reply({
-
-        content:
-        "🏆 VVLL Standings coming soon."
-
-    });
-
-}
-
-
-
-
-if(interaction.commandName === "reset-league"){
-
-
-    if(!isOwner(interaction.user.id)){
-
-        return interaction.reply({
-            content:"❌ Owner only.",
-            ephemeral:true
-        });
-
-    }
-
-
-    db.players={};
-
-    db.teams={};
-
-
-    saveDB(db);
-
-
-    return interaction.reply({
-
-        content:
-        "✅ League reset."
-
-    });
 
 }
 
 
 }
 
-};
+];
+
