@@ -1,0 +1,164 @@
+const fs = require("fs");
+
+const dbFile = "./database.json";
+
+function loadDB() {
+    if (!fs.existsSync(dbFile)) {
+        fs.writeFileSync(
+            dbFile,
+            JSON.stringify({
+                teams: {},
+                players: {},
+                games: {}
+            }, null, 4)
+        );
+    }
+
+    return JSON.parse(fs.readFileSync(dbFile));
+}
+
+function saveDB(data) {
+    fs.writeFileSync(
+        dbFile,
+        JSON.stringify(data, null, 4)
+    );
+}
+
+
+module.exports = async (interaction) => {
+
+    if (!interaction.isButton()) return;
+
+
+    const id = interaction.customId;
+
+
+    if (
+        !id.startsWith("accept_") &&
+        !id.startsWith("decline_")
+    ) return;
+
+
+    const db = loadDB();
+
+
+    const roleId = id.split("_")[1];
+
+
+    const team = db.teams[roleId];
+
+
+    if (!team) {
+        return interaction.reply({
+            content: "❌ This contract is no longer available.",
+            ephemeral: true
+        });
+    }
+
+
+
+    // ACCEPT CONTRACT
+
+    if (id.startsWith("accept_")) {
+
+
+        const guild = interaction.guild;
+
+
+        if (!guild) {
+            return interaction.reply({
+                content:"❌ This button must be used in the server.",
+                ephemeral:true
+            });
+        }
+
+
+        const member = await guild.members.fetch(
+            interaction.user.id
+        );
+
+
+        const role = guild.roles.cache.get(
+            team.roleId
+        );
+
+
+        if (role) {
+            await member.roles.add(role);
+        }
+
+
+        db.players[interaction.user.id] = {
+            team: team.name,
+            roleId: team.roleId
+        };
+
+
+        saveDB(db);
+
+
+
+        await interaction.update({
+            content:
+            `✅ You signed your VVLL contract with **${team.name}**.`,
+            embeds: [],
+            components: []
+        });
+
+
+
+        const manager = await guild.members.fetch(
+            team.managerId
+        ).catch(() => null);
+
+
+        if (manager) {
+            manager.send({
+                content:
+                `🏆 **Contract Accepted**\n\n`+
+                `${interaction.user} accepted the contract with **${team.name}**.`
+            }).catch(()=>{});
+        }
+
+    }
+
+
+
+    // DECLINE CONTRACT
+
+    if (id.startsWith("decline_")) {
+
+
+        await interaction.update({
+            content:
+            `❌ You declined the contract from **${team.name}**.`,
+            embeds: [],
+            components: []
+        });
+
+
+
+        const guild = interaction.guild;
+
+
+        if(guild){
+
+            const manager = await guild.members.fetch(
+                team.managerId
+            ).catch(()=>null);
+
+
+            if(manager){
+
+                manager.send({
+                    content:
+                    `❌ ${interaction.user} declined the contract from **${team.name}**.`
+                }).catch(()=>{});
+
+            }
+
+        }
+
+    }
+
+};
