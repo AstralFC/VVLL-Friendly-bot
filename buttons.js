@@ -6,6 +6,7 @@ const dbFile = "./database.json";
 function loadDB(){
 
     if(!fs.existsSync(dbFile)){
+
         fs.writeFileSync(
             dbFile,
             JSON.stringify({
@@ -14,12 +15,15 @@ function loadDB(){
                 games:{}
             }, null, 4)
         );
+
     }
 
     return JSON.parse(
         fs.readFileSync(dbFile)
     );
+
 }
+
 
 
 function saveDB(data){
@@ -33,7 +37,7 @@ function saveDB(data){
 
 
 
-module.exports = async (interaction) => {
+module.exports = async (interaction)=>{
 
 
     if(!interaction.isButton()) return;
@@ -49,7 +53,7 @@ module.exports = async (interaction) => {
 
 
 
-    try {
+    try{
 
 
         await interaction.deferUpdate();
@@ -59,18 +63,27 @@ module.exports = async (interaction) => {
         let db = loadDB();
 
 
-        const roleId = id.split("_")[1];
+
+        const roleId =
+        id.replace("accept_","")
+          .replace("decline_","");
 
 
-        const team = db.teams[roleId];
+
+        let team =
+        db.teams[roleId];
 
 
 
         if(!team){
 
             return interaction.editReply({
-                content:"❌ This contract expired.",
+
+                content:
+                "❌ Contract no longer exists.",
+
                 components:[]
+
             });
 
         }
@@ -83,15 +96,20 @@ module.exports = async (interaction) => {
         if(id.startsWith("accept_")){
 
 
-if(!team.guildId){
+            // find server from saved data
 
-    team.guildId = interaction.guildId;
+            if(!team.guildId){
 
-    db.teams[roleId] = team;
+                return interaction.editReply({
 
-    saveDB(db);
+                    content:
+                    "❌ This contract is old. Ask the manager to send a new contract.",
 
-}
+                    components:[]
+
+                });
+
+            }
 
 
 
@@ -102,7 +120,7 @@ if(!team.guildId){
 
 
 
-            let member =
+            const member =
             await guild.members.fetch(
                 interaction.user.id
             ).catch(()=>null);
@@ -114,7 +132,7 @@ if(!team.guildId){
                 return interaction.editReply({
 
                     content:
-                    "❌ You must join the VVLL Discord server before accepting this contract.",
+                    "❌ Join the VVLL Discord server first, then accept the contract.",
 
                     components:[]
 
@@ -136,25 +154,7 @@ if(!team.guildId){
                 return interaction.editReply({
 
                     content:
-                    "❌ Team role not found.",
-
-                    components:[]
-
-                });
-
-            }
-
-
-
-            if(
-                guild.members.me.roles.highest.position
-                <= role.position
-            ){
-
-                return interaction.editReply({
-
-                    content:
-                    "❌ Bot role is below the team role. Move the bot role above team roles.",
+                    "❌ Team role does not exist.",
 
                     components:[]
 
@@ -168,11 +168,11 @@ if(!team.guildId){
 
 
 
-            db.players[interaction.user.id] = {
+            db.players[interaction.user.id]={
 
-                team: team.name,
+                team:team.name,
 
-                roleId: team.roleId
+                roleId:team.roleId
 
             };
 
@@ -185,7 +185,7 @@ if(!team.guildId){
             await interaction.editReply({
 
                 content:
-                `✅ You signed with **${team.name}**.`,
+                `✅ Contract accepted!\nYou joined **${team.name}**.`,
 
                 components:[]
 
@@ -202,15 +202,18 @@ if(!team.guildId){
 
             if(manager){
 
-                manager.send(
-                    `🏆 Contract Accepted\n\n${interaction.user} signed with **${team.name}**.`
-                ).catch(()=>{});
+                manager.send({
+
+                    content:
+                    `🏆 Contract Accepted\n\n${interaction.user} joined **${team.name}**.`
+
+                }).catch(()=>{});
 
             }
 
 
-
         }
+
 
 
 
@@ -224,7 +227,7 @@ if(!team.guildId){
             await interaction.editReply({
 
                 content:
-                `❌ You declined the contract from **${team.name}**.`,
+                `❌ You declined **${team.name}** contract.`,
 
                 components:[]
 
@@ -241,6 +244,7 @@ if(!team.guildId){
 
             if(guild){
 
+
                 const manager =
                 await guild.members.fetch(
                     team.managerId
@@ -250,29 +254,39 @@ if(!team.guildId){
 
                 if(manager){
 
-                    manager.send(
+                    manager.send({
+
+                        content:
                         `❌ ${interaction.user} declined the contract from **${team.name}**.`
-                    ).catch(()=>{});
+
+                    }).catch(()=>{});
 
                 }
 
+
             }
+
 
         }
 
 
-    } catch(error){
+
+    }catch(error){
 
 
-        console.log("BUTTON ERROR:", error);
+        console.log(
+            "VVLL BUTTON ERROR:",
+            error
+        );
 
 
-        if(!interaction.replied){
 
-            await interaction.editReply({
+        if(interaction.deferred){
+
+            interaction.editReply({
 
                 content:
-                "❌ Something went wrong processing this contract.",
+                "❌ Contract processing error.",
 
                 components:[]
 
