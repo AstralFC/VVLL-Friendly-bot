@@ -381,3 +381,158 @@ content:`✅ Released ${player}.`
 
 
 ];
+/* DELETE TEAM */
+
+{
+data:new SlashCommandBuilder()
+.setName("delete-team")
+.setDescription("Delete a VVLL team")
+.addRoleOption(o=>
+o.setName("team")
+.setDescription("Team to delete")
+.setRequired(true)
+),
+
+async execute(interaction){
+
+if(!isOwner(interaction.user.id))
+return interaction.reply({
+content:"❌ Owner only.",
+ephemeral:true
+});
+
+
+let role = interaction.options.getRole("team");
+
+let db = loadDB();
+
+
+if(!db.teams[role.id])
+return interaction.reply({
+content:"❌ Team does not exist.",
+ephemeral:true
+});
+
+
+delete db.teams[role.id];
+
+
+for(const player in db.players){
+
+if(db.players[player].roleId === role.id){
+delete db.players[player];
+}
+
+}
+
+
+saveDB(db);
+
+
+interaction.reply({
+content:`🗑️ Deleted **${role.name}** from VVLL.`
+});
+
+}
+
+},
+
+
+
+/* TEAM ROSTER */
+
+{
+data:new SlashCommandBuilder()
+.setName("team-roster")
+.setDescription("View a team's roster")
+.addRoleOption(o=>
+o.setName("team")
+.setDescription("Team")
+.setRequired(true)
+),
+
+async execute(interaction){
+
+let role = interaction.options.getRole("team");
+
+let db = loadDB();
+
+
+let team = db.teams[role.id];
+
+
+if(!team)
+return interaction.reply({
+content:"❌ Team not found.",
+ephemeral:true
+});
+
+
+let players = Object.entries(db.players)
+.filter(([id,p])=>p.roleId===role.id)
+.map(([id])=>`<@${id}>`);
+
+
+let embed = new EmbedBuilder()
+.setColor("#ff4f8b")
+.setTitle(`🏆 ${team.name} Roster`)
+.setDescription(
+`👔 Manager: <@${team.managerId}>\n\n`+
+`👥 Players:\n`+
+(players.length ? players.join("\n") : "No players signed")
+)
+.setFooter({
+text:"VVLL Bot | VVLL | NA | S1"
+});
+
+
+interaction.reply({
+embeds:[embed]
+});
+
+}
+
+},
+
+
+
+
+/* LEAGUE ROSTER */
+
+{
+data:new SlashCommandBuilder()
+.setName("league-roster")
+.setDescription("View all VVLL teams")
+,
+
+async execute(interaction){
+
+let db = loadDB();
+
+
+let list = Object.values(db.teams)
+.map(team=>
+`🏆 **${team.name}**\n👔 Manager: <@${team.managerId}>`
+);
+
+
+let embed = new EmbedBuilder()
+.setColor("#ff4f8b")
+.setTitle("🌎 VVLL League Roster")
+.setDescription(
+list.length ?
+list.join("\n\n") :
+"No teams created yet."
+)
+.setFooter({
+text:"VVLL Bot | VVLL | NA | S1"
+});
+
+
+interaction.reply({
+embeds:[embed]
+});
+
+}
+
+}
