@@ -133,26 +133,28 @@ ephemeral:true
 let member;
 
 
-try {
-
-
-member =
-await guild.members.fetch(
-interaction.user.id
+let member = guild.members.cache.get(
+    interaction.user.id
 );
 
 
-}catch(err){
+if(!member){
 
+try {
 
-return interaction.reply({
+    member = await guild.members.fetch(
+        interaction.user.id
+    );
 
-content:"❌ You must be in the VVLL server to sign.",
+} catch(err){
 
-ephemeral:true
+    return interaction.reply({
+        content:
+        "❌ You must join the VVLL Discord server before accepting this contract.",
+        ephemeral:true
+    });
 
-});
-
+}
 
 }
 
