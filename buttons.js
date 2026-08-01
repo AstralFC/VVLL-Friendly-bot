@@ -83,18 +83,15 @@ module.exports = async (interaction) => {
         if(id.startsWith("accept_")){
 
 
-            if(!team.guildId){
+if(!team.guildId){
 
-                return interaction.editReply({
+    team.guildId = interaction.guildId;
 
-                    content:
-                    "❌ This team was created before the update. Delete and recreate the team.",
+    db.teams[roleId] = team;
 
-                    components:[]
+    saveDB(db);
 
-                });
-
-            }
+}
 
 
 
