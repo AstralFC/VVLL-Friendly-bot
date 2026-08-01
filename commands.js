@@ -1,12 +1,22 @@
+// ===============================
+// VVLL TEAM COMMANDS 1/4
+// COMMAND BUILDERS
+// ===============================
+
+
 new SlashCommandBuilder()
+
 .setName("create-team")
+
 .setDescription("Create a new VVLL team")
+
 .addStringOption(option =>
     option
     .setName("name")
     .setDescription("Team name")
     .setRequired(true)
 )
+
 .addUserOption(option =>
     option
     .setName("manager")
@@ -15,26 +25,35 @@ new SlashCommandBuilder()
 ),
 
 
+
 new SlashCommandBuilder()
+
 .setName("delete-team")
+
 .setDescription("Delete a VVLL team")
+
 .addStringOption(option =>
     option
     .setName("team")
-    .setDescription("Team name")
+    .setDescription("Team name to delete")
     .setRequired(true)
 ),
 
 
+
 new SlashCommandBuilder()
+
 .setName("sign")
-.setDescription("Sign a player to your team")
+
+.setDescription("Sign a player to a team")
+
 .addUserOption(option =>
     option
     .setName("player")
     .setDescription("Player to sign")
     .setRequired(true)
 )
+
 .addStringOption(option =>
     option
     .setName("team")
@@ -43,24 +62,45 @@ new SlashCommandBuilder()
 ),
 
 
+
 new SlashCommandBuilder()
+
 .setName("release-player")
-.setDescription("Release a player from a team")
+
+.setDescription("Release a player from their team")
+
 .addUserOption(option =>
     option
     .setName("player")
     .setDescription("Player to release")
     .setRequired(true)
 ),
+
+
+
+// ===============================
+// END OF TEAM COMMANDS 1/4
+// NEXT: PASTE TEAM COMMANDS 2/4 BELOW
+// ===============================
+// ===============================
+// VVLL TEAM COMMANDS 2/4
+// MORE COMMAND BUILDERS
+// ===============================
+
+
 new SlashCommandBuilder()
+
 .setName("team-transfer-manager")
+
 .setDescription("Change a team's manager")
+
 .addStringOption(option =>
     option
     .setName("team")
     .setDescription("Team name")
     .setRequired(true)
 )
+
 .addUserOption(option =>
     option
     .setName("manager")
@@ -69,38 +109,63 @@ new SlashCommandBuilder()
 ),
 
 
+
 new SlashCommandBuilder()
-.setName("create-game")
-.setDescription("Create a VVLL game")
+
+.setName("team-roster")
+
+.setDescription("View a team's roster")
+
 .addStringOption(option =>
     option
-    .setName("team1")
-    .setDescription("First team")
-    .setRequired(true)
-)
-.addStringOption(option =>
-    option
-    .setName("team2")
-    .setDescription("Second team")
+    .setName("team")
+    .setDescription("Team name")
     .setRequired(true)
 ),
 
 
+
 new SlashCommandBuilder()
-.setName("record-match")
-.setDescription("Record a match result")
+
+.setName("league-roster")
+
+.setDescription("View the whole league roster"),
+
+
+
+new SlashCommandBuilder()
+
+.setName("team-stats")
+
+.setDescription("View team combined stats")
+
 .addStringOption(option =>
     option
-    .setName("winner")
-    .setDescription("Winning team")
-    .setRequired(true)
-)
-.addStringOption(option =>
-    option
-    .setName("loser")
-    .setDescription("Losing team")
+    .setName("team")
+    .setDescription("Team name")
     .setRequired(true)
 ),
+
+
+
+new SlashCommandBuilder()
+
+.setName("standings")
+
+.setDescription("View VVLL standings"),
+
+
+
+// ===============================
+// END OF TEAM COMMANDS 2/4
+// NEXT: PASTE TEAM COMMANDS 3/4 BELOW
+// ===============================
+// ===============================
+// VVLL TEAM COMMANDS 3/4
+// COMMAND LOGIC
+// ===============================
+
+
 if(interaction.commandName === "create-team"){
 
 
@@ -141,8 +206,7 @@ if(interaction.commandName === "create-team"){
 
         players: [],
 
-        created:
-        Date.now()
+        created: Date.now()
 
     };
 
@@ -157,7 +221,6 @@ if(interaction.commandName === "create-team"){
 
     });
 
-
 }
 
 
@@ -168,7 +231,7 @@ if(interaction.commandName === "delete-team"){
     if(!isOwner(interaction.user.id)){
 
         return interaction.reply({
-            content:"❌ Only VVLL owners can delete teams.",
+            content:"❌ Only owners can delete teams.",
             ephemeral:true
         });
 
@@ -195,11 +258,11 @@ if(interaction.commandName === "delete-team"){
     delete db.teams[team];
 
 
-    for(const id in db.players){
+    for(const player in db.players){
 
-        if(db.players[id].team === team){
+        if(db.players[player].team === team){
 
-            db.players[id].team = null;
+            db.players[player].team = null;
 
         }
 
@@ -212,10 +275,9 @@ if(interaction.commandName === "delete-team"){
     return interaction.reply({
 
         content:
-        `🗑️ Deleted team **${team}**`
+        `🗑️ Deleted ${team}`
 
     });
-
 
 }
 
@@ -263,7 +325,7 @@ if(interaction.commandName === "sign"){
 
         db.players[player.id] = {
 
-            name:player.username,
+            name: player.username,
 
             team:null,
 
@@ -282,11 +344,7 @@ if(interaction.commandName === "sign"){
     db.players[player.id].team = team;
 
 
-    if(!db.teams[team].players.includes(player.id)){
-
-        db.teams[team].players.push(player.id);
-
-    }
+    db.teams[team].players.push(player.id);
 
 
     saveDB(db);
@@ -295,12 +353,23 @@ if(interaction.commandName === "sign"){
     return interaction.reply({
 
         content:
-        `✅ ${player} signed to **${team}**`
+        `✅ ${player} signed to ${team}`
 
     });
 
-
 }
+
+
+// ===============================
+// END OF TEAM COMMANDS 3/4
+// NEXT: PASTE TEAM COMMANDS 4/4 BELOW
+// ===============================
+// ===============================
+// VVLL TEAM COMMANDS 4/4
+// FINAL COMMAND LOGIC
+// ===============================
+
+
 if(interaction.commandName === "release-player"){
 
 
@@ -338,12 +407,8 @@ if(interaction.commandName === "release-player"){
     if(db.teams[team].manager !== interaction.user.id){
 
         return interaction.reply({
-
-            content:
-            "❌ Only the manager can release players.",
-
+            content:"❌ Only the manager can release players.",
             ephemeral:true
-
         });
 
     }
@@ -362,12 +427,8 @@ if(interaction.commandName === "release-player"){
 
 
     return interaction.reply({
-
-        content:
-        `✅ ${player} was released from ${team}`
-
+        content:`✅ Released ${player}`
     });
-
 
 }
 
@@ -379,7 +440,7 @@ if(interaction.commandName === "team-transfer-manager"){
     if(!isOwner(interaction.user.id)){
 
         return interaction.reply({
-            content:"❌ Only owners can transfer managers.",
+            content:"❌ Only owners can do this.",
             ephemeral:true
         });
 
@@ -415,119 +476,142 @@ if(interaction.commandName === "team-transfer-manager"){
 
 
     return interaction.reply({
-
-        content:
-        `✅ ${manager} is now manager of ${team}`
-
+        content:`✅ ${manager} is now manager of ${team}`
     });
-
 
 }
 
 
 
-if(interaction.commandName === "create-game"){
+if(interaction.commandName === "team-roster"){
 
 
     const db = loadDB();
 
 
-    const team1 =
-    interaction.options.getString("team1");
+    const team =
+    interaction.options.getString("team");
 
 
-    const team2 =
-    interaction.options.getString("team2");
+    let roster = "No players";
 
 
-    const id =
-    Date.now().toString();
+    if(db.teams[team]){
+
+        const players =
+        db.teams[team].players;
 
 
-    db.games[id] = {
+        if(players.length){
 
-        team1,
-        team2,
-        status:"scheduled"
+            roster =
+            players.map(id =>
+            `• ${db.players[id]?.name || id}`
+            ).join("\n");
 
-    };
+        }
 
-
-    saveDB(db);
+    }
 
 
     return interaction.reply({
 
         content:
-        `⚽ Game created:\n${team1} vs ${team2}`
+        `🏟️ **${team} Roster**\n${roster}`
 
     });
-
 
 }
 
 
 
-if(interaction.commandName === "record-match"){
+if(interaction.commandName === "league-roster"){
 
 
-    if(!isOwner(interaction.user.id)){
+    const db = loadDB();
 
-        return interaction.reply({
-            content:"❌ Only owners can record matches.",
-            ephemeral:true
+
+    let text = "";
+
+
+    for(const team in db.teams){
+
+        text += `🏆 ${team}\n`;
+
+
+        db.teams[team].players.forEach(id=>{
+
+            text +=
+            `• ${db.players[id]?.name || id}\n`;
+
+        });
+
+
+        text += "\n";
+
+    }
+
+
+    return interaction.reply({
+
+        content:
+        text || "No teams."
+
+    });
+
+}
+
+
+
+if(interaction.commandName === "team-stats"){
+
+
+    const db = loadDB();
+
+
+    const team =
+    interaction.options.getString("team");
+
+
+    let goals = 0;
+    let assists = 0;
+    let saves = 0;
+    let blocks = 0;
+
+
+    if(db.teams[team]){
+
+        db.teams[team].players.forEach(id=>{
+
+            const stats =
+            db.players[id]?.stats || {};
+
+
+            goals += stats.goals || 0;
+            assists += stats.assists || 0;
+            saves += stats.saves || 0;
+            blocks += stats.blocks || 0;
+
         });
 
     }
 
 
-    const db = loadDB();
-
-
-    const winner =
-    interaction.options.getString("winner");
-
-
-    const loser =
-    interaction.options.getString("loser");
-
-
-    if(!db.standings[winner]){
-
-        db.standings[winner] = {
-            wins:0,
-            losses:0,
-            draws:0
-        };
-
-    }
-
-
-    if(!db.standings[loser]){
-
-        db.standings[loser] = {
-            wins:0,
-            losses:0,
-            draws:0
-        };
-
-    }
-
-
-    db.standings[winner].wins++;
-
-    db.standings[loser].losses++;
-
-
-    saveDB(db);
-
-
     return interaction.reply({
 
         content:
-        `🏆 ${winner} defeated ${loser}`
+`📊 ${team} Stats
+
+⚽ Goals: ${goals}
+🎯 Assists: ${assists}
+🧤 Saves: ${saves}
+🧱 Blocks: ${blocks}`
 
     });
 
-
 }
+
+
+// ===============================
+// CLOSE execute()
+// ===============================
