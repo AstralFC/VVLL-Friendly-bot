@@ -1,5 +1,0 @@
-{
-    "teams": {},
-    "players": {},
-    "games": {}
-}
