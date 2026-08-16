@@ -1,6 +1,9 @@
 const {
     SlashCommandBuilder,
-    EmbedBuilder
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
 } = require("discord.js");
 
 const fs = require("fs");
@@ -25,15 +28,25 @@ function loadDB() {
             players: {},
             games: {},
             stats: {},
+            pendingOffers: {},
             settings: {
                 season: 1
             }
         };
     }
 
-    return JSON.parse(
+    const db = JSON.parse(
         fs.readFileSync(DB_FILE, "utf8")
     );
+
+    if (!db.teams) db.teams = {};
+    if (!db.players) db.players = {};
+    if (!db.games) db.games = {};
+    if (!db.stats) db.stats = {};
+    if (!db.pendingOffers) db.pendingOffers = {};
+    if (!db.settings) db.settings = { season: 1 };
+
+    return db;
 }
 
 function saveDB(db) {
@@ -127,7 +140,6 @@ const commands = [
                         .setName("standing")
                         .setDescription("Standing stage")
                         .setRequired(true)
-
                         .addChoices(
                             {
                                 name: "16-Stand",
@@ -153,7 +165,6 @@ const commands = [
                         .setName("format")
                         .setDescription("Game format")
                         .setRequired(true)
-
                         .addChoices(
                             { name: "4v4", value: "4v4" },
                             { name: "5v5", value: "5v5" },
@@ -173,19 +184,12 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName("sign")
-        .setDescription("Sign a player to a team")
-
-        .addRoleOption(option =>
-            option
-                .setName("team")
-                .setDescription("Your team")
-                .setRequired(true)
-        )
+        .setDescription("Send a contract offer to a player")
 
         .addUserOption(option =>
             option
                 .setName("player")
-                .setDescription("Player to sign")
+                .setDescription("Player you want to sign")
                 .setRequired(true)
         ),
 
@@ -435,55 +439,151 @@ async function handleCommand(interaction) {
 
     if (command === "sign") {
 
-        const role =
-            interaction.options.getRole("team");
-
         const player =
             interaction.options.getUser("player");
 
-        const team = db.teams[role.id];
-
-        if (!team) {
-            return interaction.reply({
-                content:
-                    "❌ That role is not a VVLL team.",
-                ephemeral: true
-            });
-        }
-
-        if (
-            interaction.user.id !== team.managerId &&
-            interaction.user.id !== team.coManagerId
-        ) {
-            return interaction.reply({
-                content:
-                    "❌ Only the team manager or co-manager can sign players.",
-                ephemeral: true
-            });
-        }
+        // Find the team this person manages
+        let managerTeam = null;
 
         for (
             const teamId of Object.keys(db.teams)
         ) {
 
-            db.teams[teamId].players =
-                db.teams[teamId].players.filter(
-                    id => id !== player.id
-                );
+            const team = db.teams[teamId];
+
+            if (
+                team.managerId === interaction.user.id ||
+                team.coManagerId === interaction.user.id
+            ) {
+                managerTeam = team;
+                break;
+            }
         }
 
-        if (!team.players.includes(player.id)) {
-            team.players.push(player.id);
+        if (!managerTeam) {
+            return interaction.reply({
+                content:
+                    "❌ You are not a manager or co-manager of a VVLL team.",
+                ephemeral: true
+            });
         }
+
+        // Check if player is already signed
+        let currentTeam = null;
+
+        for (
+            const teamId of Object.keys(db.teams)
+        ) {
+
+            const team = db.teams[teamId];
+
+            if (team.players.includes(player.id)) {
+                currentTeam = team;
+                break;
+            }
+        }
+
+        if (currentTeam) {
+            return interaction.reply({
+                content:
+                    `❌ <@${player.id}> is already signed to **${currentTeam.name}**. They must be released first.`,
+                ephemeral: true
+            });
+        }
+
+        // Check for an existing pending offer
+        if (db.pendingOffers[player.id]) {
+            return interaction.reply({
+                content:
+                    "❌ That player already has a pending contract offer.",
+                ephemeral: true
+            });
+        }
+
+        // Create unique offer ID
+        const offerId =
+            `${interaction.user.id}-${player.id}-${Date.now()}`;
+
+        db.pendingOffers[player.id] = {
+            offerId,
+            playerId: player.id,
+            teamId: managerTeam.roleId,
+            teamName: managerTeam.name,
+            offeredBy: interaction.user.id
+        };
 
         saveDB(db);
+
+        // Try to DM the player
+        try {
+
+            const dm = await player.createDM();
+
+            const embed =
+                new EmbedBuilder()
+                    .setTitle("📝 VVLL Contract Offer")
+                    .setDescription(
+                        `**${managerTeam.name}** wants to sign you to their team.\n\n` +
+                        `You have received a contract offer from **${managerTeam.name}**.\n\n` +
+                        `Do you accept this contract?`
+                    )
+                    .addFields({
+                        name: "Team",
+                        value: managerTeam.name
+                    })
+                    .setFooter({
+                        text: "VVLL Contract System"
+                    })
+                    .setTimestamp();
+
+            const row =
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(
+                                `contract_accept_${offerId}`
+                            )
+                            .setLabel("Accept")
+                            .setEmoji("✅")
+                            .setStyle(
+                                ButtonStyle.Success
+                            ),
+
+                        new ButtonBuilder()
+                            .setCustomId(
+                                `contract_decline_${offerId}`
+                            )
+                            .setLabel("Decline")
+                            .setEmoji("❌")
+                            .setStyle(
+                                ButtonStyle.Danger
+                            )
+                    );
+
+            await dm.send({
+                embeds: [embed],
+                components: [row]
+            });
+
+        } catch (error) {
+
+            delete db.pendingOffers[player.id];
+
+            saveDB(db);
+
+            return interaction.reply({
+                content:
+                    `❌ I couldn't DM <@${player.id}>. They may have DMs disabled.`,
+                ephemeral: true
+            });
+        }
 
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle("📝 Player Signed")
+                    .setTitle("📨 Contract Sent")
                     .setDescription(
-                        `<@${player.id}> has been signed to ${role}.`
+                        `A contract offer has been sent to <@${player.id}> for **${managerTeam.name}**.`
                     )
                     .setTimestamp()
             ]
@@ -503,9 +603,7 @@ async function handleCommand(interaction) {
             interaction.options.getUser("player");
 
         let teamFound = null;
-        let teamRoleId = null;
 
-        // Find the team this player belongs to
         for (
             const teamId of Object.keys(db.teams)
         ) {
@@ -513,15 +611,11 @@ async function handleCommand(interaction) {
             const team = db.teams[teamId];
 
             if (team.players.includes(player.id)) {
-
                 teamFound = team;
-                teamRoleId = teamId;
-
                 break;
             }
         }
 
-        // Player isn't on any team
         if (!teamFound) {
             return interaction.reply({
                 content:
@@ -530,8 +624,6 @@ async function handleCommand(interaction) {
             });
         }
 
-        // Only that team's manager/co-manager
-        // can release the player
         if (
             interaction.user.id !== teamFound.managerId &&
             interaction.user.id !== teamFound.coManagerId
@@ -543,7 +635,6 @@ async function handleCommand(interaction) {
             });
         }
 
-        // Remove player
         teamFound.players =
             teamFound.players.filter(
                 id => id !== player.id
@@ -770,9 +861,7 @@ async function handleCommand(interaction) {
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle(
-                        "📊 Stats Updated"
-                    )
+                    .setTitle("📊 Stats Updated")
                     .setDescription(
                         `<@${player.id}>`
                     )
@@ -823,9 +912,7 @@ async function handleCommand(interaction) {
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle(
-                        "📊 Player Stats"
-                    )
+                    .setTitle("📊 Player Stats")
                     .setDescription(
                         `<@${player.id}>`
                     )
@@ -894,13 +981,8 @@ async function handleCommand(interaction) {
         team.managerId =
             manager.id;
 
-        if (coManager) {
-            team.coManagerId =
-                coManager.id;
-        } else {
-            team.coManagerId =
-                null;
-        }
+        team.coManagerId =
+            coManager ? coManager.id : null;
 
         saveDB(db);
 
@@ -959,9 +1041,7 @@ async function handleCommand(interaction) {
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle(
-                        "🗑️ Team Deleted"
-                    )
+                    .setTitle("🗑️ Team Deleted")
                     .setDescription(
                         `${role} has been removed from VVLL.`
                     )
