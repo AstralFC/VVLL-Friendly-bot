@@ -1,6 +1,5 @@
 const {
     SlashCommandBuilder,
-    PermissionFlagsBits,
     EmbedBuilder
 } = require("discord.js");
 
@@ -10,7 +9,6 @@ const DB_FILE = "./database.json";
 
 // ==========================================
 // VVLL POC / CO-POC
-// PUT THE DISCORD USER IDS HERE
 // ==========================================
 
 const POC_ID = "1505021865985572940";
@@ -49,18 +47,18 @@ function isPOC(userId) {
 }
 
 // ==========================================
-// COMMANDS
+// SLASH COMMANDS
 // ==========================================
 
 const commands = [
 
-    // ======================================
     // /create team
-    // ======================================
+    // /create game
 
     new SlashCommandBuilder()
         .setName("create")
-        .setDescription("VVLL team commands")
+        .setDescription("VVLL creation commands")
+
         .addSubcommand(sub =>
             sub
                 .setName("team")
@@ -77,54 +75,14 @@ const commands = [
                         .setDescription("The team manager")
                         .setRequired(true)
                 )
-        ),
-
-    // ======================================
-    // /sign
-    // ======================================
-
-    new SlashCommandBuilder()
-        .setName("sign")
-        .setDescription("Sign a player to your team")
-        .addRoleOption(option =>
-            option
-                .setName("team")
-                .setDescription("Your team role")
-                .setRequired(true)
-        )
-        .addUserOption(option =>
-            option
-                .setName("player")
-                .setDescription("Player to sign")
-                .setRequired(true)
-        ),
-
-    // ======================================
-    // /view roster
-    // ======================================
-
-    new SlashCommandBuilder()
-        .setName("view")
-        .setDescription("View VVLL information")
-        .addSubcommand(sub =>
-            sub
-                .setName("roster")
-                .setDescription("View a team roster")
-                .addRoleOption(option =>
+                .addUserOption(option =>
                     option
-                        .setName("team")
-                        .setDescription("Team to view")
-                        .setRequired(true)
+                        .setName("comanager")
+                        .setDescription("The team co-manager")
+                        .setRequired(false)
                 )
-        ),
+        )
 
-    // ======================================
-    // /create game
-    // ======================================
-
-    new SlashCommandBuilder()
-        .setName("create")
-        .setDescription("VVLL creation commands")
         .addSubcommand(sub =>
             sub
                 .setName("game")
@@ -153,10 +111,22 @@ const commands = [
                         .setDescription("Standing stage")
                         .setRequired(true)
                         .addChoices(
-                            { name: "16-Stand", value: "16-stand" },
-                            { name: "8-Stand", value: "8-stand" },
-                            { name: "4-Quarter", value: "4-quarter" },
-                            { name: "2-Semi", value: "2-semi" }
+                            {
+                                name: "16-Stand",
+                                value: "16-stand"
+                            },
+                            {
+                                name: "8-Stand",
+                                value: "8-stand"
+                            },
+                            {
+                                name: "4-Quarter",
+                                value: "4-quarter"
+                            },
+                            {
+                                name: "2-Semi",
+                                value: "2-semi"
+                            }
                         )
                 )
                 .addStringOption(option =>
@@ -177,17 +147,50 @@ const commands = [
                 )
         ),
 
-    // ======================================
+    // /sign
+
+    new SlashCommandBuilder()
+        .setName("sign")
+        .setDescription("Sign a player to a team")
+        .addRoleOption(option =>
+            option
+                .setName("team")
+                .setDescription("Your team")
+                .setRequired(true)
+        )
+        .addUserOption(option =>
+            option
+                .setName("player")
+                .setDescription("Player to sign")
+                .setRequired(true)
+        ),
+
+    // /view roster
+
+    new SlashCommandBuilder()
+        .setName("view")
+        .setDescription("View VVLL information")
+        .addSubcommand(sub =>
+            sub
+                .setName("roster")
+                .setDescription("View a team roster")
+                .addRoleOption(option =>
+                    option
+                        .setName("team")
+                        .setDescription("Team to view")
+                        .setRequired(true)
+                )
+        ),
+
     // /give stats
-    // ======================================
 
     new SlashCommandBuilder()
         .setName("give")
-        .setDescription("VVLL stat commands")
+        .setDescription("Give player statistics")
         .addSubcommand(sub =>
             sub
                 .setName("stats")
-                .setDescription("Give a player stats")
+                .setDescription("Give stats to a player")
                 .addUserOption(option =>
                     option
                         .setName("player")
@@ -217,9 +220,7 @@ const commands = [
                 )
         ),
 
-    // ======================================
     // /check stats
-    // ======================================
 
     new SlashCommandBuilder()
         .setName("check")
@@ -227,22 +228,20 @@ const commands = [
         .addSubcommand(sub =>
             sub
                 .setName("stats")
-                .setDescription("Check player stats")
+                .setDescription("Check player statistics")
                 .addUserOption(option =>
                     option
                         .setName("player")
-                        .setDescription("Optional player to search")
+                        .setDescription("Optional player")
                         .setRequired(false)
                 )
         ),
 
-    // ======================================
     // /change manager
-    // ======================================
 
     new SlashCommandBuilder()
         .setName("change")
-        .setDescription("VVLL management commands")
+        .setDescription("Change VVLL management")
         .addSubcommand(sub =>
             sub
                 .setName("manager")
@@ -267,17 +266,15 @@ const commands = [
                 )
         ),
 
-    // ======================================
     // /delete team
-    // ======================================
 
     new SlashCommandBuilder()
         .setName("delete")
-        .setDescription("VVLL deletion commands")
+        .setDescription("Delete VVLL information")
         .addSubcommand(sub =>
             sub
                 .setName("team")
-                .setDescription("Delete a VVLL team")
+                .setDescription("Delete a team")
                 .addRoleOption(option =>
                     option
                         .setName("team")
@@ -288,7 +285,7 @@ const commands = [
 ];
 
 // ==========================================
-// COMMAND EXECUTION
+// COMMAND HANDLER
 // ==========================================
 
 async function handleCommand(interaction) {
@@ -313,6 +310,7 @@ async function handleCommand(interaction) {
 
         const role = interaction.options.getRole("role");
         const manager = interaction.options.getUser("manager");
+        const coManager = interaction.options.getUser("comanager");
 
         if (db.teams[role.id]) {
             return interaction.reply({
@@ -325,7 +323,7 @@ async function handleCommand(interaction) {
             roleId: role.id,
             name: role.name,
             managerId: manager.id,
-            coManagerId: null,
+            coManagerId: coManager ? coManager.id : null,
             players: []
         };
 
@@ -338,8 +336,11 @@ async function handleCommand(interaction) {
                     .setDescription(
                         `**Team:** ${role}\n` +
                         `**Manager:** <@${manager.id}>\n` +
-                        `**Co-Manager:** None\n\n` +
-                        `The team has been added to the VVLL.`
+                        `**Co-Manager:** ${
+                            coManager
+                                ? `<@${coManager.id}>`
+                                : "None"
+                        }`
                     )
                     .setTimestamp()
             ]
@@ -347,7 +348,7 @@ async function handleCommand(interaction) {
     }
 
     // ======================================
-    // SIGN PLAYER
+    // SIGN
     // ======================================
 
     if (command === "sign") {
@@ -374,17 +375,12 @@ async function handleCommand(interaction) {
             });
         }
 
-        if (team.players.includes(player.id)) {
-            return interaction.reply({
-                content: "❌ That player is already on this team.",
-                ephemeral: true
-            });
-        }
-
-        // Remove player from another team first
         for (const teamId of Object.keys(db.teams)) {
+
             db.teams[teamId].players =
-                db.teams[teamId].players.filter(id => id !== player.id);
+                db.teams[teamId].players.filter(
+                    id => id !== player.id
+                );
         }
 
         team.players.push(player.id);
@@ -414,18 +410,20 @@ async function handleCommand(interaction) {
 
         if (!team) {
             return interaction.reply({
-                content: "❌ That role is not a VVLL team.",
+                content: "❌ That team has not been created.",
                 ephemeral: true
             });
         }
 
-        let players = "No players signed.";
-
-        if (team.players.length > 0) {
-            players = team.players
-                .map((id, index) => `${index + 1}. <@${id}>`)
-                .join("\n");
-        }
+        const players =
+            team.players.length > 0
+                ? team.players
+                    .map(
+                        (id, index) =>
+                            `${index + 1}. <@${id}>`
+                    )
+                    .join("\n")
+                : "No players signed.";
 
         return interaction.reply({
             embeds: [
@@ -475,7 +473,7 @@ async function handleCommand(interaction) {
 
         if (!db.teams[team1.id] || !db.teams[team2.id]) {
             return interaction.reply({
-                content: "❌ Both teams must already be created in VVLL.",
+                content: "❌ Both teams must already be created.",
                 ephemeral: true
             });
         }
@@ -543,9 +541,15 @@ async function handleCommand(interaction) {
         }
 
         const player = interaction.options.getUser("player");
-        const goals = interaction.options.getInteger("goals");
-        const assists = interaction.options.getInteger("assists");
-        const saves = interaction.options.getInteger("saves");
+
+        const goals =
+            interaction.options.getInteger("goals");
+
+        const assists =
+            interaction.options.getInteger("assists");
+
+        const saves =
+            interaction.options.getInteger("saves");
 
         if (!db.stats[player.id]) {
             db.stats[player.id] = {
@@ -594,15 +598,18 @@ async function handleCommand(interaction) {
 
     if (command === "check" && subcommand === "stats") {
 
-        const player =
-            interaction.options.getUser("player") ||
-            interaction.user;
+        const selected =
+            interaction.options.getUser("player");
 
-        const stats = db.stats[player.id] || {
-            goals: 0,
-            assists: 0,
-            saves: 0
-        };
+        const player =
+            selected || interaction.user;
+
+        const stats =
+            db.stats[player.id] || {
+                goals: 0,
+                assists: 0,
+                saves: 0
+            };
 
         return interaction.reply({
             embeds: [
@@ -646,7 +653,8 @@ async function handleCommand(interaction) {
 
         const role = interaction.options.getRole("team");
         const manager = interaction.options.getUser("manager");
-        const coManager = interaction.options.getUser("comanager");
+        const coManager =
+            interaction.options.getUser("comanager");
 
         const team = db.teams[role.id];
 
@@ -673,11 +681,9 @@ async function handleCommand(interaction) {
                         `**Team:** ${role}\n` +
                         `**Manager:** <@${manager.id}>\n` +
                         `**Co-Manager:** ${
-                            coManager
-                                ? `<@${coManager.id}>`
-                                : team.coManagerId
-                                    ? `<@${team.coManagerId}>`
-                                    : "None"
+                            team.coManagerId
+                                ? `<@${team.coManagerId}>`
+                                : "None"
                         }`
                     )
                     .setTimestamp()
@@ -702,7 +708,7 @@ async function handleCommand(interaction) {
 
         if (!db.teams[role.id]) {
             return interaction.reply({
-                content: "❌ That team does not exist in VVLL.",
+                content: "❌ That team does not exist.",
                 ephemeral: true
             });
         }
@@ -716,7 +722,7 @@ async function handleCommand(interaction) {
                 new EmbedBuilder()
                     .setTitle("🗑️ Team Deleted")
                     .setDescription(
-                        `${role} has been removed from the VVLL database.`
+                        `${role} has been removed from VVLL.`
                     )
                     .setTimestamp()
             ]
