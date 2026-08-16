@@ -358,7 +358,24 @@ client.on("interactionCreate", async interaction => {
         if (!team.players.includes(playerId)) {
             team.players.push(playerId);
         }
+// Give the player the team's Discord role
+try {
+    const guild = await client.guilds.fetch(GUILD_ID);
+    const member = await guild.members.fetch(playerId);
+    const teamRole = await guild.roles.fetch(team.roleId);
 
+    if (teamRole && !member.roles.cache.has(teamRole.id)) {
+        await member.roles.add(teamRole);
+        console.log(
+            `✅ Gave ${playerId} the ${team.name} role.`
+        );
+    }
+} catch (error) {
+    console.error(
+        "❌ Could not give team role:",
+        error.message
+    );
+}
         db.players[playerId] = {
             id: playerId,
             teamId: team.roleId
