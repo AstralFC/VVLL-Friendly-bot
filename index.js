@@ -8,22 +8,11 @@ const {
 
 const fs = require("fs");
 
-const {
-    commands,
-    handleCommand
-} = require("./commands");
-
-// ==========================================
-// RAILWAY VARIABLES
-// ==========================================
+const { commands, handleCommand } = require("./commands");
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
-
-// ==========================================
-// DATABASE
-// ==========================================
 
 const DB_FILE = "./database.json";
 
@@ -35,9 +24,7 @@ function loadDB() {
             games: {},
             stats: {},
             pendingOffers: {},
-            settings: {
-                season: 1
-            }
+            settings: { season: 1 }
         };
     }
 
@@ -45,12 +32,12 @@ function loadDB() {
         fs.readFileSync(DB_FILE, "utf8")
     );
 
-    if (!db.teams) db.teams = {};
-    if (!db.players) db.players = {};
-    if (!db.games) db.games = {};
-    if (!db.stats) db.stats = {};
-    if (!db.pendingOffers) db.pendingOffers = {};
-    if (!db.settings) db.settings = { season: 1 };
+    db.teams ??= {};
+    db.players ??= {};
+    db.games ??= {};
+    db.stats ??= {};
+    db.pendingOffers ??= {};
+    db.settings ??= { season: 1 };
 
     return db;
 }
@@ -61,10 +48,6 @@ function saveDB(db) {
         JSON.stringify(db, null, 2)
     );
 }
-
-// ==========================================
-// DISCORD CLIENT
-// ==========================================
 
 const client = new Client({
     intents: [
@@ -81,15 +64,15 @@ const client = new Client({
 async function registerCommands() {
 
     if (!TOKEN) {
-        throw new Error("TOKEN is missing from Railway variables.");
+        throw new Error("TOKEN is missing.");
     }
 
     if (!CLIENT_ID) {
-        throw new Error("CLIENT_ID is missing from Railway variables.");
+        throw new Error("CLIENT_ID is missing.");
     }
 
     if (!GUILD_ID) {
-        throw new Error("GUILD_ID is missing from Railway variables.");
+        throw new Error("GUILD_ID is missing.");
     }
 
     const rest = new REST({
@@ -101,83 +84,50 @@ async function registerCommands() {
     try {
         await rest.put(
             Routes.applicationCommands(CLIENT_ID),
-            {
-                body: []
-            }
+            { body: [] }
         );
 
-        console.log(
-            "✅ Old global commands removed."
-        );
+        console.log("✅ Old global commands removed.");
     } catch (error) {
         console.log(
-            "⚠️ Could not remove global commands:",
+            "⚠️ Global command cleanup failed:",
             error.message
         );
     }
 
-    console.log(
-        "🧹 Removing old server commands..."
+    console.log("🧹 Removing old server commands...");
+
+    await rest.put(
+        Routes.applicationGuildCommands(
+            CLIENT_ID,
+            GUILD_ID
+        ),
+        { body: [] }
     );
 
-    try {
-        await rest.put(
-            Routes.applicationGuildCommands(
-                CLIENT_ID,
-                GUILD_ID
-            ),
-            {
-                body: []
-            }
-        );
+    console.log("✅ Old server commands removed.");
 
-        console.log(
-            "✅ Old server commands removed."
-        );
-    } catch (error) {
-        console.error(
-            "❌ Could not remove server commands:"
-        );
+    console.log("📋 Registering new VVLL commands...");
 
-        console.error(error);
-
-        throw error;
-    }
-
-    console.log(
-        "📋 Registering new VVLL commands..."
+    await rest.put(
+        Routes.applicationGuildCommands(
+            CLIENT_ID,
+            GUILD_ID
+        ),
+        {
+            body: commands.map(command =>
+                command.toJSON()
+            )
+        }
     );
 
-    try {
-        await rest.put(
-            Routes.applicationGuildCommands(
-                CLIENT_ID,
-                GUILD_ID
-            ),
-            {
-                body: commands.map(command =>
-                    command.toJSON()
-                )
-            }
-        );
-
-        console.log(
-            `✅ Registered ${commands.length} VVLL commands.`
-        );
-
-    } catch (error) {
-        console.error(
-            "❌ Command registration failed:"
-        );
-
-        console.error(error);
-
-        throw error;
-    }
+    console.log(
+        `✅ Registered ${commands.length} VVLL commands.`
+    );
 }
 
 // ==========================================
-// READY
+// BOT READY
 // ==========================================
 
 client.once("ready", () => {
@@ -192,7 +142,7 @@ client.once("ready", () => {
 });
 
 // ==========================================
-// SLASH COMMANDS
+// INTERACTIONS
 // ==========================================
 
 client.on("interactionCreate", async interaction => {
@@ -200,7 +150,7 @@ client.on("interactionCreate", async interaction => {
     try {
 
         // ======================================
-        // SLASH COMMAND
+        // SLASH COMMANDS
         // ======================================
 
         if (interaction.isChatInputCommand()) {
@@ -211,7 +161,7 @@ client.on("interactionCreate", async interaction => {
         }
 
         // ======================================
-        // BUTTON
+        // BUTTONS
         // ======================================
 
         if (!interaction.isButton()) {
@@ -220,22 +170,15 @@ client.on("interactionCreate", async interaction => {
 
         const customId = interaction.customId;
 
-        // Only contract buttons
-        if (
-            !customId.startsWith(
-                "contract_accept_"
-            ) &&
-            !customId.startsWith(
-                "contract_decline_"
-            )
-        ) {
+        const isAccept =
+            customId.startsWith("contract_accept_");
+
+        const isDecline =
+            customId.startsWith("contract_decline_");
+
+        if (!isAccept && !isDecline) {
             return;
         }
-
-        const isAccept =
-            customId.startsWith(
-                "contract_accept_"
-            );
 
         const prefix = isAccept
             ? "contract_accept_"
@@ -247,87 +190,76 @@ client.on("interactionCreate", async interaction => {
         const db = loadDB();
 
         // ======================================
-        // FIND OFFER
+        // FIND CONTRACT
         // ======================================
 
         let offer = null;
-        let offerPlayerId = null;
+        let playerId = null;
 
-        for (
-            const playerId of Object.keys(
-                db.pendingOffers
-            )
-        ) {
+        for (const id of Object.keys(db.pendingOffers)) {
 
-            const possibleOffer =
-                db.pendingOffers[playerId];
+            const possible =
+                db.pendingOffers[id];
 
             if (
-                possibleOffer &&
-                possibleOffer.offerId === offerId
+                possible &&
+                possible.offerId === offerId
             ) {
-
-                offer = possibleOffer;
-                offerPlayerId = playerId;
-
+                offer = possible;
+                playerId = id;
                 break;
             }
         }
 
         if (!offer) {
 
-            return interaction.reply({
+            await interaction.reply({
                 content:
                     "❌ This contract offer is no longer valid.",
                 ephemeral: true
             });
+
+            return;
         }
 
         // ======================================
-        // MAKE SURE PLAYER IS THE ONE
-        // WHO RECEIVED THE OFFER
+        // MAKE SURE CORRECT PLAYER CLICKED
         // ======================================
 
-        if (
-            interaction.user.id !==
-            offerPlayerId
-        ) {
+        if (interaction.user.id !== playerId) {
 
-            return interaction.reply({
+            await interaction.reply({
                 content:
-                    "❌ This contract offer belongs to another player.",
+                    "❌ This contract isn't for you.",
                 ephemeral: true
             });
+
+            return;
         }
 
         // ======================================
         // DECLINE
         // ======================================
 
-        if (!isAccept) {
+        if (isDecline) {
 
-            delete db.pendingOffers[
-                offerPlayerId
-            ];
+            delete db.pendingOffers[playerId];
 
             saveDB(db);
 
-            const declinedEmbed =
+            const embed =
                 new EmbedBuilder()
-                    .setTitle(
-                        "❌ Contract Declined"
-                    )
+                    .setTitle("❌ Contract Declined")
                     .setDescription(
                         `You declined the contract offer from **${offer.teamName}**.`
                     )
                     .setTimestamp();
 
             await interaction.update({
-                embeds: [declinedEmbed],
+                embeds: [embed],
                 components: []
             });
 
-            // Notify manager
             try {
 
                 const manager =
@@ -336,12 +268,13 @@ client.on("interactionCreate", async interaction => {
                     );
 
                 await manager.send(
-                    `❌ <@${offerPlayerId}> declined your contract offer for **${offer.teamName}**.`
+                    `❌ <@${playerId}> declined your contract offer for **${offer.teamName}**.`
                 );
 
             } catch (error) {
+
                 console.log(
-                    "⚠️ Could not DM manager about declined offer."
+                    "⚠️ Could not DM manager."
                 );
             }
 
@@ -357,18 +290,14 @@ client.on("interactionCreate", async interaction => {
 
         if (!team) {
 
-            delete db.pendingOffers[
-                offerPlayerId
-            ];
+            delete db.pendingOffers[playerId];
 
             saveDB(db);
 
-            return interaction.update({
+            await interaction.update({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle(
-                            "❌ Contract Expired"
-                        )
+                        .setTitle("❌ Contract Expired")
                         .setDescription(
                             "That team no longer exists."
                         )
@@ -376,103 +305,91 @@ client.on("interactionCreate", async interaction => {
                 ],
                 components: []
             });
+
+            return;
         }
 
         // ======================================
-        // CHECK IF PLAYER SOMEHOW JOINED
-        // ANOTHER TEAM WHILE OFFER WAS PENDING
+        // CHECK IF PLAYER JOINED ANOTHER TEAM
         // ======================================
 
-        let alreadyOnTeam = null;
+        let existingTeam = null;
 
-        for (
-            const teamId of Object.keys(db.teams)
-        ) {
+        for (const teamId of Object.keys(db.teams)) {
 
-            const existingTeam =
+            const otherTeam =
                 db.teams[teamId];
 
             if (
-                existingTeam.players.includes(
-                    offerPlayerId
+                otherTeam.players.includes(
+                    playerId
                 )
             ) {
-
-                alreadyOnTeam = existingTeam;
-
+                existingTeam = otherTeam;
                 break;
             }
         }
 
-        if (alreadyOnTeam) {
+        if (existingTeam) {
 
-            delete db.pendingOffers[
-                offerPlayerId
-            ];
+            delete db.pendingOffers[playerId];
 
             saveDB(db);
 
-            return interaction.update({
+            await interaction.update({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle(
-                            "❌ Contract Failed"
-                        )
+                        .setTitle("❌ Contract Failed")
                         .setDescription(
-                            `You are already signed to **${alreadyOnTeam.name}**.`
+                            `You are already signed to **${existingTeam.name}**.`
                         )
                         .setTimestamp()
                 ],
                 components: []
             });
+
+            return;
         }
 
         // ======================================
-        // ADD PLAYER TO TEAM
+        // ADD PLAYER
         // ======================================
 
-        if (!team.players.includes(offerPlayerId)) {
-            team.players.push(offerPlayerId);
+        if (!team.players.includes(playerId)) {
+            team.players.push(playerId);
         }
 
-        // Save player information
-        db.players[offerPlayerId] = {
-            id: offerPlayerId,
+        db.players[playerId] = {
+            id: playerId,
             teamId: team.roleId
         };
 
-        // Remove pending offer
-        delete db.pendingOffers[
-            offerPlayerId
-        ];
+        delete db.pendingOffers[playerId];
 
         saveDB(db);
 
         // ======================================
-        // ACCEPTED MESSAGE
+        // PLAYER CONFIRMATION
         // ======================================
 
-        const acceptedEmbed =
-            new EmbedBuilder()
-                .setTitle(
-                    "✅ Contract Accepted"
-                )
-                .setDescription(
-                    `You have officially joined **${team.name}**!`
-                )
-                .addFields({
-                    name: "🏆 Team",
-                    value: team.name
-                })
-                .setTimestamp();
-
         await interaction.update({
-            embeds: [acceptedEmbed],
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle("✅ Contract Accepted")
+                    .setDescription(
+                        `You have officially joined **${team.name}**!`
+                    )
+                    .addFields({
+                        name: "🏆 Team",
+                        value: team.name
+                    })
+                    .setTimestamp()
+            ],
             components: []
         });
 
         // ======================================
-        // NOTIFY MANAGER
+        // MANAGER NOTIFICATION
         // ======================================
 
         try {
@@ -483,18 +400,15 @@ client.on("interactionCreate", async interaction => {
                 );
 
             await manager.send(
-                `✅ <@${offerPlayerId}> accepted your contract offer and has joined **${team.name}**!`
+                `✅ <@${playerId}> accepted your contract offer and joined **${team.name}**!`
             );
 
         } catch (error) {
 
             console.log(
-                "⚠️ Could not DM manager about accepted offer."
+                "⚠️ Could not DM manager."
             );
         }
-
-        return;
-    }
 
     } catch (error) {
 
@@ -506,12 +420,14 @@ client.on("interactionCreate", async interaction => {
 
         try {
 
-            if (interaction.replied ||
-                interaction.deferred) {
+            if (
+                interaction.replied ||
+                interaction.deferred
+            ) {
 
                 await interaction.followUp({
                     content:
-                        "❌ Something went wrong while processing that.",
+                        "❌ Something went wrong.",
                     ephemeral: true
                 });
 
@@ -519,37 +435,31 @@ client.on("interactionCreate", async interaction => {
 
                 await interaction.reply({
                     content:
-                        "❌ Something went wrong while processing that.",
+                        "❌ Something went wrong.",
                     ephemeral: true
                 });
-
             }
 
         } catch (replyError) {
 
             console.error(
-                "❌ Could not send error message:"
+                "❌ Could not send error response."
             );
-
         }
     }
 });
 
 // ==========================================
-// START BOT
+// START
 // ==========================================
 
 async function startBot() {
 
-    console.log(
-        "🚀 Starting VVLL Bot..."
-    );
+    console.log("🚀 Starting VVLL Bot...");
 
     await registerCommands();
 
-    console.log(
-        "🔌 Connecting to Discord..."
-    );
+    console.log("🔌 Connecting to Discord...");
 
     await client.login(TOKEN);
 }
