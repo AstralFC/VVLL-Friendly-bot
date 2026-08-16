@@ -1,107 +1,134 @@
-const { 
-    Client, 
-    GatewayIntentBits, 
-    Collection,
+const {
+    Client,
+    GatewayIntentBits,
     REST,
     Routes
 } = require("discord.js");
 
-const config = {
-    token: process.env.TOKEN,
-    clientId: process.env.CLIENT_ID,
-    guildId: process.env.GUILD_ID,
-    ownerId: process.env.OWNER_ID,
-    coOwnerId: process.env.CO_OWNER_ID
-};
-const commands = require("./commands");
-const buttonHandler = require("./buttons");
+const {
+    commands,
+    handleCommand
+} = require("./commands");
+
+// ==========================================
+// BOT SETTINGS
+// ==========================================
+
+const TOKEN = process.env.TOKEN;
+const GUILD_ID = process.env.GUILD_ID;
+const CLIENT_ID = process.env.CLIENT_ID;
+
+// ==========================================
+// CLIENT
+// ==========================================
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.DirectMessages
-    ],
-    partials: [
-        "CHANNEL"
+        GatewayIntentBits.Guilds
     ]
 });
 
-client.commands = new Collection();
-
-for (const command of commands) {
-    client.commands.set(command.data.name, command);
-}
-
-
-// Register slash commands
-const rest = new REST({ version: "10" }).setToken(config.token);
+// ==========================================
+// REGISTER COMMANDS
+// ==========================================
 
 async function registerCommands() {
+
+    const rest = new REST({
+        version: "10"
+    }).setToken(TOKEN);
+
     try {
-        console.log("🔄 Registering VVLL commands...");
+
+        console.log("Registering VVLL commands...");
 
         await rest.put(
             Routes.applicationGuildCommands(
-                config.clientId,
-                config.guildId
+                CLIENT_ID,
+                GUILD_ID
             ),
             {
-                body: commands.map(cmd => cmd.data.toJSON())
+                body: commands.map(command =>
+                    command.toJSON()
+                )
             }
         );
 
-        console.log("✅ VVLL commands registered!");
+        console.log("✅ VVLL commands registered.");
+
     } catch (error) {
-        console.error(error);
+
+        console.error(
+            "❌ Command registration failed:",
+            error
+        );
+
     }
 }
 
+// ==========================================
+// BOT READY
+// ==========================================
 
-// Bot ready
-client.once("ready", async () => {
-    console.log(`🏆 ${client.user.tag} is online!`);
+client.once("ready", () => {
 
-    await registerCommands();
+    console.log(
+        `✅ VVLL Bot is online as ${client.user.tag}`
+    );
+
 });
 
+// ==========================================
+// INTERACTIONS
+// ==========================================
 
-// Slash command handler
 client.on("interactionCreate", async interaction => {
 
-    if (interaction.isChatInputCommand()) {
+    if (!interaction.isChatInputCommand()) {
+        return;
+    }
 
-        const command = client.commands.get(
-            interaction.commandName
+    try {
+
+        await handleCommand(interaction);
+
+    } catch (error) {
+
+        console.error(
+            "❌ Command error:",
+            error
         );
 
-        if (!command) return;
+        if (interaction.replied || interaction.deferred) {
 
-        try {
-            await command.execute(interaction);
-        } catch (error) {
-            console.error(error);
+            await interaction.followUp({
+                content:
+                    "❌ Something went wrong while running that command.",
+                ephemeral: true
+            });
 
-            if (!interaction.replied) {
-                await interaction.reply({
-                    content: "❌ Something went wrong.",
-                    ephemeral: true
-                });
-            }
+        } else {
+
+            await interaction.reply({
+                content:
+                    "❌ Something went wrong while running that command.",
+                ephemeral: true
+            });
+
         }
     }
-
-
-    // Button handler
-    if (interaction.isButton()) {
-        try {
-            await buttonHandler(interaction);
-        } catch(error) {
-            console.error(error);
-        }
-    }
-
 });
 
+// ==========================================
+// START BOT
+// ==========================================
 
-client.login(config.token);
+async function startBot() {
+
+    await registerCommands();
+
+    await client.login(TOKEN);
+
+}
+
+startBot();
