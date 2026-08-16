@@ -11,15 +11,34 @@ const {
 } = require("./commands");
 
 // ==========================================
-// BOT SETTINGS
+// RAILWAY VARIABLES
 // ==========================================
 
 const TOKEN = process.env.TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
 const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 
 // ==========================================
-// CLIENT
+// CHECK VARIABLES
+// ==========================================
+
+if (!TOKEN) {
+    console.error("❌ TOKEN is missing from Railway variables.");
+    process.exit(1);
+}
+
+if (!CLIENT_ID) {
+    console.error("❌ CLIENT_ID is missing from Railway variables.");
+    process.exit(1);
+}
+
+if (!GUILD_ID) {
+    console.error("❌ GUILD_ID is missing from Railway variables.");
+    process.exit(1);
+}
+
+// ==========================================
+// DISCORD CLIENT
 // ==========================================
 
 const client = new Client({
@@ -29,7 +48,7 @@ const client = new Client({
 });
 
 // ==========================================
-// REGISTER COMMANDS
+// REGISTER VVLL COMMANDS
 // ==========================================
 
 async function registerCommands() {
@@ -40,8 +59,36 @@ async function registerCommands() {
 
     try {
 
-        console.log("Registering VVLL commands...");
+        console.log("🧹 Removing old global commands...");
 
+        // Delete old global commands
+        await rest.put(
+            Routes.applicationCommands(CLIENT_ID),
+            {
+                body: []
+            }
+        );
+
+        console.log("✅ Old global commands removed.");
+
+        console.log("🧹 Removing old server commands...");
+
+        // Clear old server commands
+        await rest.put(
+            Routes.applicationGuildCommands(
+                CLIENT_ID,
+                GUILD_ID
+            ),
+            {
+                body: []
+            }
+        );
+
+        console.log("✅ Old server commands removed.");
+
+        console.log("📋 Registering new VVLL commands...");
+
+        // Register ONLY the commands from commands.js
         await rest.put(
             Routes.applicationGuildCommands(
                 CLIENT_ID,
@@ -54,14 +101,15 @@ async function registerCommands() {
             }
         );
 
-        console.log("✅ VVLL commands registered.");
+        console.log("✅ New VVLL commands registered.");
 
     } catch (error) {
 
         console.error(
-            "❌ Command registration failed:",
-            error
+            "❌ Command registration failed:"
         );
+
+        console.error(error);
 
     }
 }
@@ -76,48 +124,58 @@ client.once("ready", () => {
         `✅ VVLL Bot is online as ${client.user.tag}`
     );
 
+    console.log(
+        `🏆 VVLL is connected to server: ${GUILD_ID}`
+    );
+
 });
 
 // ==========================================
-// INTERACTIONS
+// COMMAND HANDLER
 // ==========================================
 
-client.on("interactionCreate", async interaction => {
+client.on(
+    "interactionCreate",
+    async interaction => {
 
-    if (!interaction.isChatInputCommand()) {
-        return;
-    }
+        if (!interaction.isChatInputCommand()) {
+            return;
+        }
 
-    try {
+        try {
 
-        await handleCommand(interaction);
+            await handleCommand(interaction);
 
-    } catch (error) {
+        } catch (error) {
 
-        console.error(
-            "❌ Command error:",
-            error
-        );
+            console.error(
+                "❌ Command error:",
+                error
+            );
 
-        if (interaction.replied || interaction.deferred) {
+            if (
+                interaction.replied ||
+                interaction.deferred
+            ) {
 
-            await interaction.followUp({
-                content:
-                    "❌ Something went wrong while running that command.",
-                ephemeral: true
-            });
+                await interaction.followUp({
+                    content:
+                        "❌ Something went wrong while running that command.",
+                    ephemeral: true
+                });
 
-        } else {
+            } else {
 
-            await interaction.reply({
-                content:
-                    "❌ Something went wrong while running that command.",
-                ephemeral: true
-            });
+                await interaction.reply({
+                    content:
+                        "❌ Something went wrong while running that command.",
+                    ephemeral: true
+                });
 
+            }
         }
     }
-});
+);
 
 // ==========================================
 // START BOT
@@ -125,10 +183,24 @@ client.on("interactionCreate", async interaction => {
 
 async function startBot() {
 
+    console.log("🚀 Starting VVLL Bot...");
+
     await registerCommands();
+
+    console.log("🔌 Connecting to Discord...");
 
     await client.login(TOKEN);
 
 }
 
-startBot();
+startBot().catch(error => {
+
+    console.error(
+        "❌ VVLL Bot failed to start:"
+    );
+
+    console.error(error);
+
+    process.exit(1);
+
+});
