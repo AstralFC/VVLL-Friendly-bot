@@ -1,9 +1,8 @@
 {
-  "version": 2,
   "teams": {},
   "players": {},
   "games": {},
-  "standings": {},
+  "stats": {},
   "settings": {
     "season": 1
   }
