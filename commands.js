@@ -10,16 +10,8 @@ const fs = require("fs");
 
 const DB_FILE = "./database.json";
 
-// ==========================================
-// VVLL POC / CO-POC
-// ==========================================
-
 const POC_ID = "1505021865985572940";
 const CO_POC_ID = "1429837765281058876";
-
-// ==========================================
-// DATABASE
-// ==========================================
 
 function loadDB() {
     if (!fs.existsSync(DB_FILE)) {
@@ -29,9 +21,7 @@ function loadDB() {
             games: {},
             stats: {},
             pendingOffers: {},
-            settings: {
-                season: 1
-            }
+            settings: { season: 1 }
         };
     }
 
@@ -39,12 +29,12 @@ function loadDB() {
         fs.readFileSync(DB_FILE, "utf8")
     );
 
-    if (!db.teams) db.teams = {};
-    if (!db.players) db.players = {};
-    if (!db.games) db.games = {};
-    if (!db.stats) db.stats = {};
-    if (!db.pendingOffers) db.pendingOffers = {};
-    if (!db.settings) db.settings = { season: 1 };
+    db.teams ??= {};
+    db.players ??= {};
+    db.games ??= {};
+    db.stats ??= {};
+    db.pendingOffers ??= {};
+    db.settings ??= { season: 1 };
 
     return db;
 }
@@ -56,10 +46,6 @@ function saveDB(db) {
     );
 }
 
-// ==========================================
-// PERMISSIONS
-// ==========================================
-
 function isPOC(userId) {
     return (
         userId === POC_ID ||
@@ -67,16 +53,11 @@ function isPOC(userId) {
     );
 }
 
-// ==========================================
-// COMMANDS
-// ==========================================
-
 const commands = [
 
-    // ======================================
-    // /create team
-    // /create game
-    // ======================================
+    // ==========================================
+    // /create
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("create")
@@ -138,7 +119,7 @@ const commands = [
                 .addStringOption(option =>
                     option
                         .setName("standing")
-                        .setDescription("Standing stage")
+                        .setDescription("Tournament stage")
                         .setRequired(true)
                         .addChoices(
                             {
@@ -178,24 +159,24 @@ const commands = [
                 )
         ),
 
-    // ======================================
+    // ==========================================
     // /sign
-    // ======================================
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("sign")
-        .setDescription("Send a contract offer to a player")
+        .setDescription("Send a contract offer")
 
         .addUserOption(option =>
             option
                 .setName("player")
-                .setDescription("Player you want to sign")
+                .setDescription("Player to sign")
                 .setRequired(true)
         ),
 
-    // ======================================
+    // ==========================================
     // /release player
-    // ======================================
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("release")
@@ -204,7 +185,7 @@ const commands = [
         .addSubcommand(sub =>
             sub
                 .setName("player")
-                .setDescription("Release a player from your team")
+                .setDescription("Release a player")
 
                 .addUserOption(option =>
                     option
@@ -214,14 +195,15 @@ const commands = [
                 )
         ),
 
-    // ======================================
-    // /view roster
-    // ======================================
+    // ==========================================
+    // /view
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("view")
         .setDescription("View VVLL information")
 
+        // /view roster
         .addSubcommand(sub =>
             sub
                 .setName("roster")
@@ -233,11 +215,18 @@ const commands = [
                         .setDescription("Team to view")
                         .setRequired(true)
                 )
+        )
+
+        // /view league
+        .addSubcommand(sub =>
+            sub
+                .setName("league")
+                .setDescription("View every VVLL team")
         ),
 
-    // ======================================
+    // ==========================================
     // /give stats
-    // ======================================
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("give")
@@ -280,9 +269,9 @@ const commands = [
                 )
         ),
 
-    // ======================================
+    // ==========================================
     // /check stats
-    // ======================================
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("check")
@@ -301,9 +290,9 @@ const commands = [
                 )
         ),
 
-    // ======================================
+    // ==========================================
     // /change manager
-    // ======================================
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("change")
@@ -312,7 +301,7 @@ const commands = [
         .addSubcommand(sub =>
             sub
                 .setName("manager")
-                .setDescription("Change a team's manager")
+                .setDescription("Change team management")
 
                 .addRoleOption(option =>
                     option
@@ -336,9 +325,9 @@ const commands = [
                 )
         ),
 
-    // ======================================
+    // ==========================================
     // /delete team
-    // ======================================
+    // ==========================================
 
     new SlashCommandBuilder()
         .setName("delete")
@@ -366,7 +355,9 @@ async function handleCommand(interaction) {
 
     const db = loadDB();
 
-    const command = interaction.commandName;
+    const command =
+        interaction.commandName;
+
     const subcommand =
         interaction.options.getSubcommand(false);
 
@@ -409,7 +400,9 @@ async function handleCommand(interaction) {
             name: role.name,
             managerId: manager.id,
             coManagerId:
-                coManager ? coManager.id : null,
+                coManager
+                    ? coManager.id
+                    : null,
             players: []
         };
 
@@ -434,7 +427,7 @@ async function handleCommand(interaction) {
     }
 
     // ======================================
-    // SIGN PLAYER
+    // SIGN
     // ======================================
 
     if (command === "sign") {
@@ -442,18 +435,20 @@ async function handleCommand(interaction) {
         const player =
             interaction.options.getUser("player");
 
-        // Find the team this person manages
         let managerTeam = null;
 
         for (
             const teamId of Object.keys(db.teams)
         ) {
 
-            const team = db.teams[teamId];
+            const team =
+                db.teams[teamId];
 
             if (
-                team.managerId === interaction.user.id ||
-                team.coManagerId === interaction.user.id
+                team.managerId ===
+                    interaction.user.id ||
+                team.coManagerId ===
+                    interaction.user.id
             ) {
                 managerTeam = team;
                 break;
@@ -468,16 +463,20 @@ async function handleCommand(interaction) {
             });
         }
 
-        // Check if player is already signed
         let currentTeam = null;
 
         for (
             const teamId of Object.keys(db.teams)
         ) {
 
-            const team = db.teams[teamId];
+            const team =
+                db.teams[teamId];
 
-            if (team.players.includes(player.id)) {
+            if (
+                team.players.includes(
+                    player.id
+                )
+            ) {
                 currentTeam = team;
                 break;
             }
@@ -491,8 +490,9 @@ async function handleCommand(interaction) {
             });
         }
 
-        // Check for an existing pending offer
-        if (db.pendingOffers[player.id]) {
+        if (
+            db.pendingOffers[player.id]
+        ) {
             return interaction.reply({
                 content:
                     "❌ That player already has a pending contract offer.",
@@ -500,7 +500,6 @@ async function handleCommand(interaction) {
             });
         }
 
-        // Create unique offer ID
         const offerId =
             `${interaction.user.id}-${player.id}-${Date.now()}`;
 
@@ -514,31 +513,35 @@ async function handleCommand(interaction) {
 
         saveDB(db);
 
-        // Try to DM the player
         try {
 
-            const dm = await player.createDM();
+            const dm =
+                await player.createDM();
 
             const embed =
                 new EmbedBuilder()
-                    .setTitle("📝 VVLL Contract Offer")
+                    .setTitle(
+                        "📝 VVLL Contract Offer"
+                    )
                     .setDescription(
-                        `**${managerTeam.name}** wants to sign you to their team.\n\n` +
-                        `You have received a contract offer from **${managerTeam.name}**.\n\n` +
+                        `**${managerTeam.name}** wants to sign you.\n\n` +
                         `Do you accept this contract?`
                     )
                     .addFields({
-                        name: "Team",
-                        value: managerTeam.name
+                        name: "🏆 Team",
+                        value:
+                            managerTeam.name
                     })
                     .setFooter({
-                        text: "VVLL Contract System"
+                        text:
+                            "VVLL Contract System"
                     })
                     .setTimestamp();
 
             const row =
                 new ActionRowBuilder()
                     .addComponents(
+
                         new ButtonBuilder()
                             .setCustomId(
                                 `contract_accept_${offerId}`
@@ -567,13 +570,15 @@ async function handleCommand(interaction) {
 
         } catch (error) {
 
-            delete db.pendingOffers[player.id];
+            delete db.pendingOffers[
+                player.id
+            ];
 
             saveDB(db);
 
             return interaction.reply({
                 content:
-                    `❌ I couldn't DM <@${player.id}>. They may have DMs disabled.`,
+                    `❌ I couldn't DM <@${player.id}>. Their DMs may be disabled.`,
                 ephemeral: true
             });
         }
@@ -583,7 +588,7 @@ async function handleCommand(interaction) {
                 new EmbedBuilder()
                     .setTitle("📨 Contract Sent")
                     .setDescription(
-                        `A contract offer has been sent to <@${player.id}> for **${managerTeam.name}**.`
+                        `A contract offer was sent to <@${player.id}> for **${managerTeam.name}**.`
                     )
                     .setTimestamp()
             ]
@@ -608,9 +613,14 @@ async function handleCommand(interaction) {
             const teamId of Object.keys(db.teams)
         ) {
 
-            const team = db.teams[teamId];
+            const team =
+                db.teams[teamId];
 
-            if (team.players.includes(player.id)) {
+            if (
+                team.players.includes(
+                    player.id
+                )
+            ) {
                 teamFound = team;
                 break;
             }
@@ -619,14 +629,16 @@ async function handleCommand(interaction) {
         if (!teamFound) {
             return interaction.reply({
                 content:
-                    "❌ That player is not currently on a VVLL team.",
+                    "❌ That player is not on a VVLL team.",
                 ephemeral: true
             });
         }
 
         if (
-            interaction.user.id !== teamFound.managerId &&
-            interaction.user.id !== teamFound.coManagerId
+            interaction.user.id !==
+                teamFound.managerId &&
+            interaction.user.id !==
+                teamFound.coManagerId
         ) {
             return interaction.reply({
                 content:
@@ -637,15 +649,20 @@ async function handleCommand(interaction) {
 
         teamFound.players =
             teamFound.players.filter(
-                id => id !== player.id
+                id =>
+                    id !== player.id
             );
+
+        delete db.players[player.id];
 
         saveDB(db);
 
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle("📤 Player Released")
+                    .setTitle(
+                        "📤 Player Released"
+                    )
                     .setDescription(
                         `<@${player.id}> has been released from **${teamFound.name}**.`
                     )
@@ -666,7 +683,8 @@ async function handleCommand(interaction) {
         const role =
             interaction.options.getRole("team");
 
-        const team = db.teams[role.id];
+        const team =
+            db.teams[role.id];
 
         if (!team) {
             return interaction.reply({
@@ -677,7 +695,7 @@ async function handleCommand(interaction) {
         }
 
         const players =
-            team.players.length > 0
+            team.players.length
                 ? team.players
                     .map(
                         (id, index) =>
@@ -694,13 +712,15 @@ async function handleCommand(interaction) {
                     )
                     .addFields(
                         {
-                            name: "👑 Manager",
+                            name:
+                                "👑 Manager",
                             value:
                                 `<@${team.managerId}>`,
                             inline: true
                         },
                         {
-                            name: "⭐ Co-Manager",
+                            name:
+                                "⭐ Co-Manager",
                             value:
                                 team.coManagerId
                                     ? `<@${team.coManagerId}>`
@@ -710,11 +730,77 @@ async function handleCommand(interaction) {
                         {
                             name:
                                 `👥 Players (${team.players.length})`,
-                            value: players
+                            value:
+                                players
                         }
                     )
                     .setTimestamp()
             ]
+        });
+    }
+
+    // ======================================
+    // VIEW LEAGUE
+    // ======================================
+
+    if (
+        command === "view" &&
+        subcommand === "league"
+    ) {
+
+        const teams =
+            Object.values(db.teams);
+
+        if (teams.length === 0) {
+            return interaction.reply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle(
+                            "🏆 VVLL League"
+                        )
+                        .setDescription(
+                            "No teams have been created yet."
+                        )
+                        .setTimestamp()
+                ]
+            });
+        }
+
+        const embed =
+            new EmbedBuilder()
+                .setTitle(
+                    "🏆 VVLL League"
+                )
+                .setDescription(
+                    `**${teams.length} team${
+                        teams.length === 1
+                            ? ""
+                            : "s"
+                    } registered**`
+                )
+                .setTimestamp();
+
+        for (const team of teams) {
+
+            embed.addFields({
+                name:
+                    `🏟️ ${team.name}`,
+
+                value:
+                    `👑 **Manager:** <@${team.managerId}>\n` +
+                    `⭐ **Co-Manager:** ${
+                        team.coManagerId
+                            ? `<@${team.coManagerId}>`
+                            : "None"
+                    }\n` +
+                    `👥 **Players:** ${
+                        team.players.length
+                    }`
+            });
+        }
+
+        return interaction.reply({
+            embeds: [embed]
         });
     }
 
@@ -745,10 +831,14 @@ async function handleCommand(interaction) {
             interaction.options.getString("time");
 
         const standing =
-            interaction.options.getString("standing");
+            interaction.options.getString(
+                "standing"
+            );
 
         const format =
-            interaction.options.getString("format");
+            interaction.options.getString(
+                "format"
+            );
 
         if (
             !db.teams[team1.id] ||
@@ -761,7 +851,9 @@ async function handleCommand(interaction) {
             });
         }
 
-        if (team1.id === team2.id) {
+        if (
+            team1.id === team2.id
+        ) {
             return interaction.reply({
                 content:
                     "❌ A team cannot play itself.",
@@ -773,8 +865,10 @@ async function handleCommand(interaction) {
             Date.now().toString();
 
         db.games[gameId] = {
-            team1: team1.id,
-            team2: team2.id,
+            team1:
+                team1.id,
+            team2:
+                team2.id,
             time,
             standing,
             format
@@ -790,23 +884,30 @@ async function handleCommand(interaction) {
                     )
                     .addFields(
                         {
-                            name: "Teams",
+                            name:
+                                "Teams",
                             value:
                                 `${team1} vs ${team2}`
                         },
                         {
-                            name: "🕐 Time",
-                            value: time,
+                            name:
+                                "🕐 Time",
+                            value:
+                                time,
                             inline: true
                         },
                         {
-                            name: "🏆 Standing",
-                            value: standing,
+                            name:
+                                "🏆 Standing",
+                            value:
+                                standing,
                             inline: true
                         },
                         {
-                            name: "📋 Format",
-                            value: format,
+                            name:
+                                "📋 Format",
+                            value:
+                                format,
                             inline: true
                         }
                     )
@@ -833,16 +934,24 @@ async function handleCommand(interaction) {
         }
 
         const player =
-            interaction.options.getUser("player");
+            interaction.options.getUser(
+                "player"
+            );
 
         const goals =
-            interaction.options.getInteger("goals");
+            interaction.options.getInteger(
+                "goals"
+            );
 
         const assists =
-            interaction.options.getInteger("assists");
+            interaction.options.getInteger(
+                "assists"
+            );
 
         const saves =
-            interaction.options.getInteger("saves");
+            interaction.options.getInteger(
+                "saves"
+            );
 
         if (!db.stats[player.id]) {
             db.stats[player.id] = {
@@ -852,33 +961,46 @@ async function handleCommand(interaction) {
             };
         }
 
-        db.stats[player.id].goals += goals;
-        db.stats[player.id].assists += assists;
-        db.stats[player.id].saves += saves;
+        db.stats[player.id].goals +=
+            goals;
+
+        db.stats[player.id].assists +=
+            assists;
+
+        db.stats[player.id].saves +=
+            saves;
 
         saveDB(db);
 
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle("📊 Stats Updated")
+                    .setTitle(
+                        "📊 Stats Updated"
+                    )
                     .setDescription(
                         `<@${player.id}>`
                     )
                     .addFields(
                         {
-                            name: "⚽ Goals",
-                            value: `+${goals}`,
+                            name:
+                                "⚽ Goals",
+                            value:
+                                `+${goals}`,
                             inline: true
                         },
                         {
-                            name: "🎯 Assists",
-                            value: `+${assists}`,
+                            name:
+                                "🎯 Assists",
+                            value:
+                                `+${assists}`,
                             inline: true
                         },
                         {
-                            name: "🧤 Saves",
-                            value: `+${saves}`,
+                            name:
+                                "🧤 Saves",
+                            value:
+                                `+${saves}`,
                             inline: true
                         }
                     )
@@ -897,10 +1019,13 @@ async function handleCommand(interaction) {
     ) {
 
         const selected =
-            interaction.options.getUser("player");
+            interaction.options.getUser(
+                "player"
+            );
 
         const player =
-            selected || interaction.user;
+            selected ||
+            interaction.user;
 
         const stats =
             db.stats[player.id] || {
@@ -912,25 +1037,30 @@ async function handleCommand(interaction) {
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle("📊 Player Stats")
+                    .setTitle(
+                        "📊 Player Stats"
+                    )
                     .setDescription(
                         `<@${player.id}>`
                     )
                     .addFields(
                         {
-                            name: "⚽ Goals",
+                            name:
+                                "⚽ Goals",
                             value:
                                 `${stats.goals}`,
                             inline: true
                         },
                         {
-                            name: "🎯 Assists",
+                            name:
+                                "🎯 Assists",
                             value:
                                 `${stats.assists}`,
                             inline: true
                         },
                         {
-                            name: "🧤 Saves",
+                            name:
+                                "🧤 Saves",
                             value:
                                 `${stats.saves}`,
                             inline: true
@@ -959,13 +1089,19 @@ async function handleCommand(interaction) {
         }
 
         const role =
-            interaction.options.getRole("team");
+            interaction.options.getRole(
+                "team"
+            );
 
         const manager =
-            interaction.options.getUser("manager");
+            interaction.options.getUser(
+                "manager"
+            );
 
         const coManager =
-            interaction.options.getUser("comanager");
+            interaction.options.getUser(
+                "comanager"
+            );
 
         const team =
             db.teams[role.id];
@@ -982,7 +1118,9 @@ async function handleCommand(interaction) {
             manager.id;
 
         team.coManagerId =
-            coManager ? coManager.id : null;
+            coManager
+                ? coManager.id
+                : null;
 
         saveDB(db);
 
@@ -1024,7 +1162,9 @@ async function handleCommand(interaction) {
         }
 
         const role =
-            interaction.options.getRole("team");
+            interaction.options.getRole(
+                "team"
+            );
 
         if (!db.teams[role.id]) {
             return interaction.reply({
@@ -1041,7 +1181,9 @@ async function handleCommand(interaction) {
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle("🗑️ Team Deleted")
+                    .setTitle(
+                        "🗑️ Team Deleted"
+                    )
                     .setDescription(
                         `${role} has been removed from VVLL.`
                     )
@@ -1050,10 +1192,6 @@ async function handleCommand(interaction) {
         });
     }
 }
-
-// ==========================================
-// EXPORT
-// ==========================================
 
 module.exports = {
     commands,
