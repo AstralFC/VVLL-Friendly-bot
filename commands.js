@@ -11,7 +11,7 @@ const fs = require("fs");
 
 const DB_FILE = "./database.json";
 
-const POC_ID = "1505021865985572940
+const POC_ID = "1505021865985572940"
 
 const TEAM_OWNER_ROLE_ID = "1539809139394478121";
 
